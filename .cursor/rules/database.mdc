@@ -1,0 +1,24 @@
+---
+description: Convenciones SQL y base de datos del worker
+globs: sql/**/*.sql,src/db/**/*.ts
+alwaysApply: false
+---
+
+# SQL — WhatsappQueue
+
+- Tabla: `"WhatsappQueue"` (comillas dobles, camelCase Prisma)
+- Estados: `PENDING` → `PROCESSING` → `SENT` | `FAILED`
+- FKs: `tenantId` → `Tenant`, `qrCampaignId` → `QrCampaign`
+- Migraciones idempotentes en `sql/schema.sql`
+
+## Claim seguro (no modificar sin revisar escalado)
+
+```sql
+FOR UPDATE SKIP LOCKED
+```
+
+## Columnas del worker
+
+`languageCode`, `errorLog`, `sentAt` — agregadas por `sql/schema.sql`.
+
+Ver `docs/DATABASE.md` para schema completo.

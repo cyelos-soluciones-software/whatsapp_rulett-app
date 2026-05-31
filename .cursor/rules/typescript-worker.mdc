@@ -1,0 +1,35 @@
+---
+description: Convenciones TypeScript para el worker de WhatsApp
+globs: src/**/*.ts,scripts/**/*.ts
+alwaysApply: false
+---
+
+# TypeScript — Worker Rulett
+
+## Imports
+
+```typescript
+// Usar extensión .js en imports relativos (NodeNext)
+import { loadConfig } from './config.js';
+```
+
+## Estructura
+
+- SQL/queries → `src/db/queue.ts`
+- HTTP Meta API → `src/services/whatsapp.ts`
+- Tipos → `src/types.ts`
+- Env vars → `src/config.ts`
+- Orquestación → `src/index.ts`
+
+## Patrones
+
+- Logs JSON: `console.log(JSON.stringify({ ts, level, message, ...meta }))`
+- Errores HTTP en servicios: retornar `{ ok: false, error }`, no throw
+- SQL: placeholders `$1`, nunca interpolar strings
+- Claim de cola: mantener `FOR UPDATE SKIP LOCKED`
+
+## Prohibido
+
+- Agregar Express/Fastify/Prisma/axios
+- Commitear `.env` o tokens
+- Renombrar columnas Prisma sin actualizar docs

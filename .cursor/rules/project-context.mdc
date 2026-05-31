@@ -1,0 +1,19 @@
+---
+description: Contexto del proyecto whatsapp-rulett-worker para agentes de IA
+alwaysApply: true
+---
+
+# Contexto del proyecto
+
+Worker Node.js/TypeScript que consume `"WhatsappQueue"` (PostgreSQL/Neon) y envía WhatsApp via Meta Graph API v25.0.
+
+- **No es una API REST** — es un background worker con polling.
+- **No usa Prisma** — acceso SQL directo con `pg`.
+- **No inserta en la cola** — solo consume registros `PENDING`.
+- Schema Prisma compartido con app Rulett — respetar camelCase y FKs.
+
+Lee `AGENTS.md` en la raíz para contexto completo antes de cambios significativos.
+
+Variables requeridas: `DATABASE_URL`, `POLL_INTERVAL_MS`, `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_ID`, `WHATSAPP_ACCOUNT_ID`.
+
+Comandos clave: `npm run dev`, `npm run build`, `npm run db:schema`, `npm run db:seed`.

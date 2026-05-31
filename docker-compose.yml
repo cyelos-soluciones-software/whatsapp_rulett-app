@@ -1,0 +1,25 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: rulett_postgres
+    restart: unless-stopped
+    ports:
+      - "5440:5432"
+    environment:
+      POSTGRES_USER: rulett_admin
+      POSTGRES_PASSWORD: rulett_secure_password_local
+      POSTGRES_DB: rulett_db
+    volumes:
+      - rulett_pg_data:/var/lib/postgresql/data
+      - ./sql/dev-bootstrap.sql:/docker-entrypoint-initdb.d/01-dev-bootstrap.sql:ro
+      - ./sql/schema.sql:/docker-entrypoint-initdb.d/02-schema.sql:ro
+      - ./sql/seed.sql:/docker-entrypoint-initdb.d/03-seed.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rulett_admin -d rulett_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+volumes:
+  rulett_pg_data:

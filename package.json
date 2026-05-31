@@ -1,0 +1,37 @@
+{
+  "name": "whatsapp-rulett-worker",
+  "version": "1.0.0",
+  "description": "Worker que consume WhatsappQueue y envía mensajes vía Meta Graph API",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx watch src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "db:up": "docker compose up -d --wait",
+    "db:down": "docker compose down",
+    "db:reset": "docker compose down -v && npm run db:setup",
+    "db:logs": "docker compose logs -f postgres",
+    "db:schema": "tsx scripts/apply-schema.ts",
+    "db:schema:docker": "docker compose exec -T postgres psql -U rulett_admin -d rulett_db -f /docker-entrypoint-initdb.d/02-schema.sql",
+    "db:bootstrap": "tsx scripts/apply-sql.ts sql/dev-bootstrap.sql",
+    "db:seed": "tsx scripts/seed.ts",
+    "db:seed:sql": "docker compose exec -T postgres psql -U rulett_admin -d rulett_db -f - < sql/seed.sql",
+    "db:inspect": "tsx scripts/inspect-db.ts",
+    "db:setup": "npm run db:up && npm run db:schema && npm run db:seed"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^16.5.0",
+    "pg": "^8.16.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.21",
+    "@types/pg": "^8.15.2",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3"
+  }
+}
