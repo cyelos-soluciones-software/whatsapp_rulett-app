@@ -2,19 +2,19 @@ import { Pool } from 'pg';
 import type { Config } from '../config.js';
 import type { QueueStatus, WhatsappQueueRow } from '../types.js';
 
-const QUEUE_COLUMNS = `
-  id,
-  "tenantId",
-  "qrCampaignId",
-  "userPhone",
-  "userName",
-  "templateName",
-  "languageCode",
-  status,
-  "errorLog",
-  "createdAt",
-  "updatedAt",
-  "sentAt"
+const RETURNING_COLUMNS = `
+  q.id,
+  q."tenantId",
+  q."qrCampaignId",
+  q."userPhone",
+  q."userName",
+  q."templateName",
+  q."languageCode",
+  q.status,
+  q."errorLog",
+  q."createdAt",
+  q."updatedAt",
+  q."sentAt"
 `;
 
 function mapRow(row: Record<string, unknown>): WhatsappQueueRow {
@@ -80,7 +80,7 @@ export class QueueRepository {
           FOR UPDATE SKIP LOCKED
         ) AS pending
         WHERE q.id = pending.id
-        RETURNING ${QUEUE_COLUMNS}
+        RETURNING ${RETURNING_COLUMNS}
         `,
         [limit],
       );
