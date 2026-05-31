@@ -1,5 +1,6 @@
-import { loadConfig } from './config.js';
+import { loadConfig, maskDatabaseUrl } from './config.js';
 import { QueueRepository } from './db/queue.js';
+import { formatError, logFatalError } from './lib/errors.js';
 import { WhatsappClient } from './services/whatsapp.js';
 import type { WhatsappQueueRow } from './types.js';
 
@@ -75,7 +76,16 @@ async function processBatch(
 }
 
 async function main(): Promise<void> {
+  log('info', 'Iniciando worker de WhatsApp...');
+
   const config = loadConfig();
+  log('info', 'Configuración cargada', {
+    databaseHost: maskDatabaseUrl(config.databaseUrl),
+    databaseSsl: config.databaseSsl,
+    pollIntervalMs: config.pollIntervalMs,
+    batchSize: config.batchSize,
+  });
+
   const queue = new QueueRepository(config);
   const whatsapp = new WhatsappClient(config);
 
@@ -103,7 +113,16 @@ async function main(): Promise<void> {
     void shutdown('SIGINT');
   });
 
-  await queue.ping();
+  try {
+    await queue.ping();
+  } catch (error) {
+    throw new Error(
+      `No se pudo conectar a PostgreSQL (${maskDatabaseUrl(config.databaseUrl)}, ssl=${config.databaseSsl}): ${formatError(error)}`,
+      { cause: error },
+    );
+  }
+
+  log('info', 'Conexión a PostgreSQL verificada');
   log('info', 'Worker iniciado', {
     pollIntervalMs: config.pollIntervalMs,
     batchSize: config.batchSize,
@@ -117,8 +136,7 @@ async function main(): Promise<void> {
     try {
       await processBatch(queue, whatsapp, config.batchSize);
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      log('error', 'Error en ciclo de polling', { error: message });
+      log('error', 'Error en ciclo de polling', { error: formatError(error) });
     } finally {
       inFlight = false;
     }
@@ -134,7 +152,6 @@ async function main(): Promise<void> {
 }
 
 main().catch((error) => {
-  const message = error instanceof Error ? error.message : String(error);
-  console.error(JSON.stringify({ ts: new Date().toISOString(), level: 'error', message }));
+  logFatalError(error, 'Fallo fatal al iniciar el worker');
   process.exit(1);
 });

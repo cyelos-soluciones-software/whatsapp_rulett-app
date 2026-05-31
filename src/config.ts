@@ -11,6 +11,14 @@ export interface Config {
   whatsappLanguageCode: string;
 }
 
+const PRISMA_ONLY_QUERY_PARAMS = [
+  'schema',
+  'connection_limit',
+  'pool_timeout',
+  'pgbouncer',
+  'connect_timeout',
+];
+
 function requireEnv(name: string): string {
   const value = process.env[name]?.trim();
   if (!value) {
@@ -49,13 +57,53 @@ function parseBoolean(name: string, fallback: boolean): boolean {
   throw new Error(`${name} debe ser true o false. Valor recibido: ${raw}`);
 }
 
+/**
+ * Elimina parámetros de Prisma (?schema=public) que pg no necesita.
+ */
+export function normalizeDatabaseUrl(url: string): string {
+  const queryIndex = url.indexOf('?');
+  if (queryIndex === -1) {
+    return url;
+  }
+
+  const base = url.slice(0, queryIndex);
+  const params = new URLSearchParams(url.slice(queryIndex + 1));
+
+  for (const param of PRISMA_ONLY_QUERY_PARAMS) {
+    params.delete(param);
+  }
+
+  const rest = params.toString();
+  return rest ? `${base}?${rest}` : base;
+}
+
+function inferDatabaseSsl(databaseUrl: string): boolean {
+  if (/neon\.tech|neon\.database/.test(databaseUrl)) {
+    return true;
+  }
+
+  return !/localhost|127\.0\.0\.1/.test(databaseUrl);
+}
+
+export function maskDatabaseUrl(url: string): string {
+  try {
+    const normalized = normalizeDatabaseUrl(url);
+    const parsed = new URL(normalized.replace(/^postgresql:/, 'http:'));
+    parsed.password = parsed.password ? '***' : '';
+    parsed.username = parsed.username ? '***' : '';
+    return parsed.toString().replace(/^http:/, 'postgresql:');
+  } catch {
+    return '(url inválida)';
+  }
+}
+
 export function loadConfig(): Config {
-  const databaseUrl = requireEnv('DATABASE_URL');
-  const isLocalhost = /localhost|127\.0\.0\.1/.test(databaseUrl);
+  const databaseUrl = normalizeDatabaseUrl(requireEnv('DATABASE_URL'));
+  const databaseSsl = parseBoolean('DATABASE_SSL', inferDatabaseSsl(databaseUrl));
 
   return {
     databaseUrl,
-    databaseSsl: parseBoolean('DATABASE_SSL', !isLocalhost),
+    databaseSsl,
     pollIntervalMs: parsePositiveInt('POLL_INTERVAL_MS', 60_000),
     batchSize: parsePositiveInt('BATCH_SIZE', 50),
     whatsappToken: requireEnv('WHATSAPP_TOKEN'),
