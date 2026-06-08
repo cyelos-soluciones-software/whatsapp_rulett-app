@@ -5,7 +5,7 @@
 | Recurso | Detalle |
 |---|---|
 | Runtime | Node.js ≥ 20 LTS |
-| Tipo de servicio | Background Worker (no web service) |
+| Tipo de servicio | **Web Service** (expone `POST /api/trigger` + polling en background) |
 | Base de datos | PostgreSQL (Neon recomendado) |
 | Variables de entorno | Ver `.env.example` |
 | Build | `npm install && npm run build` |
@@ -22,8 +22,12 @@ WHATSAPP_TOKEN=EAAxxxxx
 WHATSAPP_PHONE_ID=1064133880126015
 WHATSAPP_ACCOUNT_ID=868325479011642
 WHATSAPP_LANGUAGE_CODE=es_CO
+WORKER_API_KEY=secreto_largo_aleatorio
+PORT=8080
 NODE_ENV=production
 ```
+
+`PORT` lo asigna Render automáticamente en Web Service; no hace falta fijarlo manualmente.
 
 **Antes del primer deploy:** ejecutar `npm run db:schema` contra la BD de producción para agregar columnas del worker.
 
@@ -31,9 +35,9 @@ NODE_ENV=production
 
 ## Render
 
-### Crear Background Worker
+### Crear Web Service
 
-1. **New → Background Worker**
+1. **New → Web Service** (no Background Worker: necesita puerto HTTP para `/api/trigger`)
 2. Conectar repositorio Git
 3. Configurar:
 

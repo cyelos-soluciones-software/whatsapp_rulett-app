@@ -26,4 +26,6 @@ COPY --from=builder /app/dist ./dist
 
 USER app
 
+EXPOSE 8080
+
 CMD ["node", "dist/index.js"]

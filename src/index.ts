@@ -1,8 +1,9 @@
 import { loadConfig, maskDatabaseUrl } from './config.js';
 import { QueueRepository } from './db/queue.js';
 import { formatError, logFatalError } from './lib/errors.js';
+import { processBatch } from './processor.js';
+import { startTriggerServer } from './server.js';
 import { WhatsappClient } from './services/whatsapp.js';
-import type { WhatsappQueueRow } from './types.js';
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -18,63 +19,6 @@ function log(level: 'info' | 'warn' | 'error', message: string, meta?: Record<st
   console.log(JSON.stringify(entry));
 }
 
-async function processRow(
-  row: WhatsappQueueRow,
-  whatsapp: WhatsappClient,
-  queue: QueueRepository,
-): Promise<void> {
-  log('info', 'Procesando mensaje', {
-    queueId: row.id,
-    tenantId: row.tenantId,
-    campaignId: row.qrCampaignId,
-    userPhone: row.userPhone,
-    userName: row.userName,
-    templateName: row.templateName,
-  });
-
-  const result = await whatsapp.sendTemplateMessage(row);
-
-  if (result.ok) {
-    await queue.markSent(row.id);
-    log('info', 'Mensaje enviado', {
-      queueId: row.id,
-      messageId: result.messageId,
-      statusCode: result.statusCode,
-    });
-    return;
-  }
-
-  const errorLog = result.error ?? 'Error desconocido al enviar mensaje';
-  await queue.markFailed(row.id, errorLog);
-
-  log('error', 'Fallo al enviar mensaje', {
-    queueId: row.id,
-    statusCode: result.statusCode,
-    error: errorLog,
-  });
-}
-
-async function processBatch(
-  queue: QueueRepository,
-  whatsapp: WhatsappClient,
-  batchSize: number,
-): Promise<number> {
-  const rows = await queue.claimPendingBatch(batchSize);
-
-  if (rows.length === 0) {
-    log('info', 'No hay mensajes PENDING en la cola');
-    return 0;
-  }
-
-  log('info', 'Lote reclamado', { count: rows.length });
-
-  for (const row of rows) {
-    await processRow(row, whatsapp, queue);
-  }
-
-  return rows.length;
-}
-
 async function main(): Promise<void> {
   log('info', 'Iniciando worker de WhatsApp...');
 
@@ -84,6 +28,7 @@ async function main(): Promise<void> {
     databaseSsl: config.databaseSsl,
     pollIntervalMs: config.pollIntervalMs,
     batchSize: config.batchSize,
+    httpPort: config.httpPort,
   });
 
   const queue = new QueueRepository(config);
@@ -91,6 +36,26 @@ async function main(): Promise<void> {
 
   let running = true;
   let inFlight = false;
+
+  const runBatch = async (source: 'poll' | 'trigger'): Promise<void> => {
+    if (inFlight) {
+      log('info', 'Procesamiento omitido: ya hay un lote en curso', { source });
+      return;
+    }
+
+    inFlight = true;
+    try {
+      const count = await processBatch(queue, whatsapp, config.batchSize);
+      log('info', 'Ciclo de procesamiento finalizado', { source, processed: count });
+    } catch (error) {
+      log('error', 'Error en ciclo de procesamiento', {
+        source,
+        error: formatError(error),
+      });
+    } finally {
+      inFlight = false;
+    }
+  };
 
   const shutdown = async (signal: string): Promise<void> => {
     log('info', 'Señal de apagado recibida, deteniendo worker...', { signal });
@@ -123,6 +88,15 @@ async function main(): Promise<void> {
   }
 
   log('info', 'Conexión a PostgreSQL verificada');
+
+  startTriggerServer({
+    port: config.httpPort,
+    apiKey: config.workerApiKey,
+    onTrigger: () => {
+      void runBatch('trigger');
+    },
+  });
+
   log('info', 'Worker iniciado', {
     pollIntervalMs: config.pollIntervalMs,
     batchSize: config.batchSize,
@@ -131,15 +105,7 @@ async function main(): Promise<void> {
   });
 
   while (running) {
-    inFlight = true;
-
-    try {
-      await processBatch(queue, whatsapp, config.batchSize);
-    } catch (error) {
-      log('error', 'Error en ciclo de polling', { error: formatError(error) });
-    } finally {
-      inFlight = false;
-    }
+    await runBatch('poll');
 
     if (!running) {
       break;

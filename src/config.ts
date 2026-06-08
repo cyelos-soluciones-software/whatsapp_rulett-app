@@ -5,6 +5,8 @@ export interface Config {
   databaseSsl: boolean;
   pollIntervalMs: number;
   batchSize: number;
+  httpPort: number;
+  workerApiKey: string;
   whatsappToken: string;
   whatsappPhoneId: string;
   whatsappAccountId: string;
@@ -101,11 +103,19 @@ export function loadConfig(): Config {
   const databaseUrl = normalizeDatabaseUrl(requireEnv('DATABASE_URL'));
   const databaseSsl = parseBoolean('DATABASE_SSL', inferDatabaseSsl(databaseUrl));
 
+  const httpPortRaw = process.env.PORT?.trim();
+  const httpPort = httpPortRaw ? Number.parseInt(httpPortRaw, 10) : 8080;
+  if (!Number.isFinite(httpPort) || httpPort <= 0) {
+    throw new Error(`PORT debe ser un entero positivo. Valor recibido: ${httpPortRaw}`);
+  }
+
   return {
     databaseUrl,
     databaseSsl,
     pollIntervalMs: parsePositiveInt('POLL_INTERVAL_MS', 60_000),
     batchSize: parsePositiveInt('BATCH_SIZE', 50),
+    httpPort,
+    workerApiKey: requireEnv('WORKER_API_KEY'),
     whatsappToken: requireEnv('WHATSAPP_TOKEN'),
     whatsappPhoneId: requireEnv('WHATSAPP_PHONE_ID'),
     whatsappAccountId: requireEnv('WHATSAPP_ACCOUNT_ID'),
