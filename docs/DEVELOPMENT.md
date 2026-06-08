@@ -31,6 +31,15 @@ WHATSAPP_TOKEN=<tu-token-meta>
 WHATSAPP_PHONE_ID=1064133880126015
 WHATSAPP_ACCOUNT_ID=868325479011642
 WHATSAPP_LANGUAGE_CODE=es_CO
+WORKER_API_KEY=dev_secret_local
+PORT=8080
+```
+
+Probar trigger local:
+
+```bash
+curl -X POST http://localhost:8080/api/trigger \
+  -H "Authorization: Bearer dev_secret_local"
 ```
 
 ## Opción A: PostgreSQL con Docker

@@ -2,7 +2,7 @@
 
 Worker en **Node.js + TypeScript** que consume la cola `"WhatsappQueue"` en PostgreSQL (Neon) y envía mensajes de WhatsApp vía **Meta Graph API**.
 
-Parte del ecosistema **Rulett**: la aplicación principal inserta mensajes `PENDING`; este servicio los procesa y envía.
+Parte del ecosistema **Rulett**: la app principal encola `PENDING` y dispara envío con `POST /api/trigger` (Bearer `WORKER_API_KEY`). El worker también hace **polling** automático.
 
 ## Quick start
 
@@ -40,6 +40,8 @@ Copia `.env.example` a `.env` y configura:
 | `WHATSAPP_ACCOUNT_ID` | ID de la cuenta Meta Business |
 | `BATCH_SIZE` | Mensajes por lote (default: `50`) |
 | `WHATSAPP_LANGUAGE_CODE` | Idioma default de templates (default: `es_CO`) |
+| `WORKER_API_KEY` | Bearer compartido con Vercel para `/api/trigger` |
+| `PORT` | Puerto HTTP (Render lo asigna; default `8080` local) |
 | `DATABASE_SSL` | `true` en Neon, `false` en localhost |
 
 ## Scripts disponibles
@@ -60,23 +62,26 @@ Copia `.env.example` a `.env` y configura:
 ## Arquitectura
 
 ```
-┌─────────────┐     INSERT PENDING     ┌──────────────────┐
-│  App Rulett │ ─────────────────────▶ │  WhatsappQueue   │
-│  (Prisma)   │                        │  (PostgreSQL)    │
-└─────────────┘                        └────────┬─────────┘
-                                                │ polling
-                                                ▼
-                                       ┌──────────────────┐
-                                       │  Este Worker     │
-                                       │  (Node.js/TS)    │
-                                       └────────┬─────────┘
-                                                │ POST
-                                                ▼
-                                       ┌──────────────────┐
-                                       │  Meta Graph API  │
-                                       │  WhatsApp v25.0  │
-                                       └──────────────────┘
+┌─────────────┐  INSERT PENDING   ┌──────────────────┐
+│  App Rulett │ ────────────────▶ │  WhatsappQueue   │
+│  (Prisma)   │                   │  (PostgreSQL)    │
+└──────┬──────┘                   └────────┬─────────┘
+       │ POST /api/trigger                 │ polling
+       │ (WORKER_API_KEY)                  ▼
+       └──────────────────────▶ ┌──────────────────┐
+                                  │  Este Worker     │
+                                  │  polling + HTTP  │
+                                  └────────┬─────────┘
+                                           │ template POST
+                                           ▼
+                                  ┌──────────────────┐
+                                  │  Meta Graph API  │
+                                  └──────────────────┘
 ```
+
+**Endpoints:** `GET /health`, `GET|POST /api/trigger` (Bearer `WORKER_API_KEY`).
+
+**Render:** desplegar como **Web Service** (no Background Worker).
 
 ## Documentación
 

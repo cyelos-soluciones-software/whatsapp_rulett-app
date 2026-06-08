@@ -7,13 +7,16 @@ alwaysApply: true
 
 Worker Node.js/TypeScript que consume `"WhatsappQueue"` (PostgreSQL/Neon) y envía WhatsApp via Meta Graph API v25.0.
 
-- **No es una API REST** — es un background worker con polling.
+- **HTTP mínimo** — `GET /health`, `GET|POST /api/trigger` (Bearer `WORKER_API_KEY`); no es API REST general.
+- **Polling + trigger** — bucle `POLL_INTERVAL_MS` y disparo bajo demanda desde rulett-app.
 - **No usa Prisma** — acceso SQL directo con `pg`.
 - **No inserta en la cola** — solo consume registros `PENDING`.
+- **Render: Web Service** (no Background Worker) — requiere puerto HTTP.
 - Schema Prisma compartido con app Rulett — respetar camelCase y FKs.
+- Límite mensual `maxWhatsappPerMonth` se aplica en **rulett-app** al encolar.
 
 Lee `AGENTS.md` en la raíz para contexto completo antes de cambios significativos.
 
-Variables requeridas: `DATABASE_URL`, `POLL_INTERVAL_MS`, `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_ID`, `WHATSAPP_ACCOUNT_ID`.
+Variables requeridas: `DATABASE_URL`, `POLL_INTERVAL_MS`, `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_ID`, `WHATSAPP_ACCOUNT_ID`, `WORKER_API_KEY` (prod).
 
 Comandos clave: `npm run dev`, `npm run build`, `npm run db:schema`, `npm run db:seed`.

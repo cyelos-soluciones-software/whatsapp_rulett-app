@@ -4,20 +4,21 @@
 
 ## Resumen ejecutivo
 
-**whatsapp-rulett-worker** es un microservicio **Worker** (no expone HTTP) escrito en **TypeScript + Node.js LTS**. Su única responsabilidad:
+**whatsapp-rulett-worker** es un microservicio **TypeScript + Node.js LTS** que combina:
 
-1. Hacer polling de la tabla PostgreSQL `"WhatsappQueue"`.
-2. Enviar mensajes de plantilla vía **Meta WhatsApp Cloud API** (Graph API v25.0).
-3. Actualizar el estado de cada registro (`PENDING` → `PROCESSING` → `SENT` | `FAILED`).
+1. **Polling** de la tabla PostgreSQL `"WhatsappQueue"`.
+2. **HTTP mínimo** para disparo bajo demanda (`GET/POST /api/trigger`, `GET /health`).
+3. Envío de plantillas vía **Meta WhatsApp Cloud API** (Graph API v25.0).
+4. Actualización de estado (`PENDING` → `PROCESSING` → `SENT` | `FAILED`).
 
-El worker **no inserta** mensajes en la cola. Eso lo hace la aplicación principal (Rulett) vía Prisma. Este repo solo **consume** la cola.
+**No es una API REST general** — solo endpoints de control del worker. La app Rulett **inserta** en cola y **dispara** el trigger con `WORKER_API_KEY`.
 
 ## Contexto del ecosistema
 
 | Componente | Rol | Repositorio |
 |---|---|---|
-| App principal Rulett | Crea registros `PENDING` en `WhatsappQueue` | *(externo, Prisma)* |
-| **Este worker** | Procesa la cola y envía WhatsApp | Este repo |
+| App principal Rulett | Encola `PENDING` + `POST` trigger (`WORKER_API_KEY`) | `rulett-app` |
+| **Este worker** | Polling + procesa bajo demanda + envía WhatsApp | Este repo |
 | Neon PostgreSQL | Base de datos compartida | Cloud |
 | Meta Graph API | Envío de mensajes WhatsApp | Externo |
 
@@ -25,9 +26,11 @@ El worker **no inserta** mensajes en la cola. Eso lo hace la aplicación princip
 
 ```
 src/
-  index.ts              # Entry point: bucle de polling + graceful shutdown
-  config.ts             # Carga y valida variables de entorno
-  types.ts              # Tipos TypeScript compartidos
+  index.ts              # Entry: polling + arranca servidor HTTP
+  processor.ts          # processBatch(): claim + envío Meta
+  server.ts             # HTTP nativo: /api/trigger, /health
+  config.ts             # Env: DATABASE_URL, WORKER_API_KEY, PORT, Meta
+  types.ts              # Tipos compartidos
   db/queue.ts           # QueueRepository (pg): claim, markSent, markFailed
   services/whatsapp.ts  # WhatsappClient: POST a Graph API
 scripts/
@@ -70,6 +73,8 @@ docs/                   # Documentación extendida (ver índice abajo)
 | `WHATSAPP_ACCOUNT_ID` | Sí | — | ID cuenta Meta (logging) |
 | `BATCH_SIZE` | No | `50` | Registros por lote |
 | `WHATSAPP_LANGUAGE_CODE` | No | `es_CO` | Fallback si fila no tiene `languageCode` |
+| `WORKER_API_KEY` | Sí (prod) | — | Bearer para `/api/trigger` (mismo valor en Vercel) |
+| `PORT` | No | `8080` | Puerto HTTP (Render lo inyecta) |
 | `DATABASE_SSL` | No | auto | `false` en localhost, `true` en Neon |
 
 Ver `.env.example`. **Nunca commitear `.env`.**
@@ -113,7 +118,7 @@ npm run db:setup     # Docker up + schema + seed
 
 ### No hacer
 
-- No convertir esto en un servidor HTTP/API REST.
+- No expandir a API REST pública (solo `/api/trigger` y `/health` existentes).
 - No agregar ORM (Prisma) — el worker usa SQL directo con `pg`.
 - No commitear `.env`, tokens ni credenciales.
 - No cambiar nombres de tabla/columna sin actualizar `docs/DATABASE.md` y coordinar con Prisma.
@@ -132,9 +137,9 @@ npm run db:setup     # Docker up + schema + seed
 
 ## Despliegue
 
-- **Render:** Background Worker — Build: `npm install && npm run build`, Start: `npm start`
-- **Railway:** Mismo comando de start, variables de entorno en dashboard
-- **Docker:** `Dockerfile` multi-stage incluido
+- **Render:** **Web Service** (no Background Worker) — Build: `npm install && npm run build`, Start: `npm start`, health: `GET /health`
+- **Railway:** Web service con `PORT` expuesto
+- **Docker:** `Dockerfile` multi-stage, `EXPOSE 8080`
 
 Detalle: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
 
@@ -152,12 +157,13 @@ Detalle: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
 
 ## Estado actual del proyecto
 
-- Worker funcional con polling, claim optimista y envío a Meta Graph API v25.0.
-- Compatible con schema Prisma existente (`Tenant`, `QrCampaign`, `WhatsappQueue`).
-- Docker Compose para PostgreSQL local en puerto 5440.
-- Scripts de seed, schema e inspección de BD.
+- Polling + trigger HTTP (`POST /api/trigger` con `Authorization: Bearer WORKER_API_KEY`).
+- `GET /health` para Render/Railway.
+- Claim optimista `FOR UPDATE SKIP LOCKED` y envío Meta Graph API v25.0.
+- Compatible con schema Prisma (`Tenant`, `QrCampaign`, `WhatsappQueue`).
+- Límite mensual por tenant se aplica en **rulett-app** al encolar; el worker solo procesa lo que hay en cola.
+- Docker Compose PostgreSQL local :5440; scripts seed/schema/inspect.
 - Sin tests automatizados aún.
-- Sin health check HTTP (es un worker puro, no un web service).
 
 ## Puntos de extensión futuros (no implementados)
 
@@ -165,4 +171,3 @@ Detalle: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
 - Procesamiento paralelo controlado (con rate limiter).
 - Métricas / observabilidad (Prometheus, Datadog).
 - Soporte para templates con parámetros dinámicos (`components`).
-- Health check endpoint opcional para plataformas que lo requieran.

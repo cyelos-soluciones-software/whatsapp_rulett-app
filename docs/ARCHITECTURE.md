@@ -2,120 +2,100 @@
 
 ## Visión general
 
-El worker implementa el patrón **Queue Consumer** con polling periódico. No expone endpoints HTTP; es un proceso de larga duración diseñado para desplegarse como **Background Worker** en Render o Railway.
+El worker implementa el patrón **Queue Consumer** con polling periódico **y** disparo HTTP bajo demanda. Se despliega como **Web Service** en Render (puerto HTTP requerido para `/api/trigger`).
+
+La app Rulett encola mensajes y puede invocar el worker vía:
+- Botón **Enviar pendientes ahora** en `/admin/whatsapp`
+- Cron Vercel `GET /api/cron/send-whatsapp` → `POST` al worker
 
 ## Componentes
 
 ### `src/index.ts` — Orquestador
 
-- Punto de entrada del proceso.
-- Bucle principal: `processBatch()` → `sleep(POLL_INTERVAL_MS)`.
-- Manejo de señales `SIGTERM` / `SIGINT` para apagado graceful.
-- Logging estructurado en JSON.
+- Arranca servidor HTTP (`server.ts`) y bucle de polling.
+- Bucle: `processBatch()` → `sleep(POLL_INTERVAL_MS)`.
+- Señales `SIGTERM` / `SIGINT` para apagado graceful.
+- Logging estructurado JSON.
+
+### `src/processor.ts` — Procesamiento de cola
+
+- `processBatch()`: reclama lote, envía a Meta, marca `SENT` / `FAILED`.
+- Reutilizado por polling y por `/api/trigger`.
+
+### `src/server.ts` — HTTP mínimo
+
+- `GET /health` — health check (Render).
+- `GET|POST /api/trigger` — procesa un lote inmediato si `Authorization: Bearer WORKER_API_KEY` es válido.
+- Servidor HTTP nativo de Node (sin Express).
 
 ### `src/config.ts` — Configuración
 
-- Carga variables de entorno con `dotenv`.
-- Valida presencia de variables requeridas al inicio (fail-fast).
-- Detecta automáticamente si SSL es necesario según el host de `DATABASE_URL`.
+- Carga variables con `dotenv`.
+- Valida requeridas al inicio (fail-fast), incl. `WORKER_API_KEY` en producción.
+- SSL automático según host de `DATABASE_URL`.
 
 ### `src/db/queue.ts` — QueueRepository
 
-- Pool de conexiones `pg` (max 10 conexiones).
-- `claimPendingBatch(limit)`: reclama registros con bloqueo optimista.
-- `markSent(id)`: actualiza a `SENT` con timestamp.
-- `markFailed(id, errorLog)`: actualiza a `FAILED` con motivo.
+- Pool `pg` (max 10 conexiones).
+- `claimPendingBatch(limit)`: `FOR UPDATE SKIP LOCKED`.
+- `markSent(id)` / `markFailed(id, errorLog)`.
 
 ### `src/services/whatsapp.ts` — WhatsappClient
 
-- Cliente HTTP para Meta Graph API v25.0.
-- Envía mensajes de tipo `template`.
-- Retorna resultado tipado (`WhatsappSendResult`) sin lanzar excepciones por errores HTTP.
+- Meta Graph API v25.0, mensajes `template`.
+- Retorna `WhatsappSendResult` sin lanzar por errores HTTP.
 
-### `src/types.ts` — Tipos
-
-- `WhatsappQueueRow`: representa una fila de la cola.
-- `QueueStatus`: union type de estados válidos.
-- `WhatsappSendResult`: resultado del envío a Meta.
-
-## Diagrama de secuencia
+## Diagrama de secuencia (polling o trigger)
 
 ```
-Worker                  QueueRepository           PostgreSQL          WhatsappClient          Meta API
+Worker/HTTP            QueueRepository           PostgreSQL          WhatsappClient          Meta API
   │                          │                        │                      │                    │
   │── claimPendingBatch() ──▶│                        │                      │                    │
-  │                          │── BEGIN ──────────────▶│                      │                    │
   │                          │── UPDATE SKIP LOCKED ─▶│                      │                    │
-  │                          │◀── RETURNING rows ────│                      │                    │
-  │                          │── COMMIT ─────────────▶│                      │                    │
   │◀── WhatsappQueueRow[] ──│                        │                      │                    │
-  │                          │                        │                      │                    │
   │── sendTemplateMessage() ──────────────────────────────────────────────▶│                    │
   │                          │                        │                      │── POST /messages ─▶│
-  │                          │                        │                      │◀── 200 / 4xx ─────│
-  │◀── WhatsappSendResult ─────────────────────────────────────────────────│                    │
-  │                          │                        │                      │                    │
-  │── markSent/markFailed() ▶│                        │                      │                    │
-  │                          │── UPDATE status ──────▶│                      │                    │
-  │                          │                        │                      │                    │
-  │── sleep(POLL_INTERVAL) ──│                        │                      │                    │
+  │── markSent/markFailed() ▶│── UPDATE status ──────▶│                      │                    │
+```
+
+## Diagrama: trigger desde rulett-app
+
+```
+Tenant Admin / Vercel cron
+        │
+        ▼
+  rulett-app (whatsapp-worker-trigger.ts)
+        │ POST /api/trigger + Bearer WORKER_API_KEY
+        ▼
+  whatsapp_rulett-app (server.ts → processor.ts)
+        │
+        ▼
+  WhatsappQueue → Meta Graph API
 ```
 
 ## Decisiones de diseño
 
 ### ¿Por qué `pg` y no Prisma?
 
-- El worker solo necesita 3 queries SQL optimizadas.
-- `FOR UPDATE SKIP LOCKED` es más natural en SQL crudo.
-- Evita dependencia pesada y generación de cliente Prisma en un microservicio independiente.
+- Solo 3 queries SQL optimizadas; `FOR UPDATE SKIP LOCKED` en SQL crudo.
+- Microservicio independiente sin cliente Prisma.
 
-### ¿Por qué polling y no LISTEN/NOTIFY?
+### ¿Por qué polling + trigger?
 
-- Simplicidad operacional: funciona igual en Neon, Render y Railway.
-- Resiliente a desconexiones: el próximo ciclo retoma automáticamente.
-- Trade-off: latencia = `POLL_INTERVAL_MS` (aceptable para notificaciones de cupones).
+- Polling: resiliencia sin depender de Vercel cron.
+- Trigger: latencia baja tras encolar desde admin o cron Pro.
 
 ### ¿Por qué `FOR UPDATE SKIP LOCKED`?
 
-- Permite escalar horizontalmente (N réplicas del worker).
-- Cada réplica reclama filas distintas sin bloquearse mutuamente.
-- Alternativa descartada: `SELECT + UPDATE` separados (race condition con múltiples workers).
+- Escalado horizontal seguro (N réplicas).
 
-### ¿Por qué procesamiento secuencial?
+### ¿Por qué HTTP mínimo y no API REST?
 
-- Meta impone rate limits por número de teléfono.
-- Simplifica trazabilidad de errores por mensaje.
-- Extensible: se puede agregar un rate limiter + concurrencia controlada después.
+- Render Background Worker no expone puerto; Rulett necesita disparar envío.
+- Solo `/api/trigger` y `/health` — no CRUD ni endpoints públicos.
 
-### ¿Por qué logs JSON?
+## Integración con límites mensuales (rulett-app)
 
-- Compatible con agregadores de logs en cloud (Render, Railway, Datadog).
-- Facilita filtrado por `queueId`, `level`, `tenantId`.
+El cupo `Tenant.maxWhatsappPerMonth` se valida en **rulett-app** al encolar (`queueWhatsappMessages`). Este worker no consulta el límite; procesa registros `PENDING` existentes.
 
-## Límites y consideraciones
-
-| Aspecto | Estado actual | Mejora futura |
-|---|---|---|
-| Rate limiting Meta | No implementado | Token bucket / retry-after |
-| Reintentos | No (FAILED permanece) | Job de retry con max attempts |
-| Dead letter queue | No | Tabla o status `DEAD` |
-| Idempotencia Meta | Parcial (via claim) | Message dedup key |
-| Observabilidad | Solo stdout JSON | Métricas Prometheus |
-| Templates dinámicos | Solo nombre + idioma | Soporte `components` |
-
-## Dependencias externas
-
-```
-┌─────────────────────────────────────────────────┐
-│                    Worker                        │
-│  ┌─────────┐  ┌──────────────┐  ┌────────────┐ │
-│  │  dotenv  │  │     pg       │  │ fetch (native)│
-│  └─────────┘  └──────┬───────┘  └──────┬─────┘ │
-└───────────────────────┼─────────────────┼────────┘
-                        │                 │
-                        ▼                 ▼
-                 ┌────────────┐   ┌──────────────┐
-                 │ PostgreSQL │   │ Meta Graph   │
-                 │   (Neon)   │   │ API v25.0    │
-                 └────────────┘   └──────────────┘
-```
+Conteo mensual en Rulett: `status = SENT` y `sentAt >= inicio del mes` (zona Colombia).

@@ -53,7 +53,7 @@ NODE_ENV=production
 ### Notas Render
 
 - Render envía `SIGTERM` al redeploy — el worker lo maneja con graceful shutdown.
-- No necesita health check HTTP (es background worker).
+- Configurar health check en `GET /health` (recomendado en Web Service).
 - Logs disponibles en el dashboard (formato JSON).
 - Para escalar: aumentar número de instancias (el claim con `SKIP LOCKED` lo soporta).
 
@@ -77,7 +77,7 @@ NODE_ENV=production
 
 - Railway también envía `SIGTERM` en redeploys.
 - Conectar Neon via `DATABASE_URL` en variables.
-- No exponer puerto — no es un web service.
+- Exponer puerto HTTP (`PORT`) — necesario para `/api/trigger` desde rulett-app.
 
 ---
 
@@ -130,6 +130,7 @@ Neon ofrece connection string con pooler (`-pooler` en el host). Recomendado par
 - [ ] `npm run build` exitoso
 - [ ] `npm run db:schema` ejecutado en BD de producción
 - [ ] Variables de entorno configuradas (sin commitear `.env`)
+- [ ] `WORKER_API_KEY` idéntica en Render y Vercel (`rulett-app`)
 - [ ] `WHATSAPP_TOKEN` válido y no expirado
 - [ ] Templates de WhatsApp aprobados en Meta Business Manager
 - [ ] Índice `idx_whatsapp_queue_pending` existe
