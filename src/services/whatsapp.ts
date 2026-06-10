@@ -1,5 +1,5 @@
 import type { Config } from '../config.js';
-import type { WhatsappQueueRow, WhatsappSendResult } from '../types.js';
+import type { WhatsappQueueRow, WhatsappSendResult, WhatsappTemplateParams } from '../types.js';
 
 const GRAPH_API_VERSION = 'v25.0';
 
@@ -15,6 +15,78 @@ interface GraphErrorBody {
 
 interface GraphSuccessBody {
   messages?: Array<{ id: string }>;
+}
+
+type TemplateTextParameter = {
+  type: 'text';
+  parameter_name: string;
+  text: string;
+};
+
+type TemplateComponent = {
+  type: 'header' | 'body';
+  parameters: TemplateTextParameter[];
+};
+
+function textParam(parameterName: string, value: string): TemplateTextParameter {
+  return {
+    type: 'text',
+    parameter_name: parameterName,
+    text: value,
+  };
+}
+
+function buildTemplateComponents(
+  templateName: string,
+  params: WhatsappTemplateParams,
+): TemplateComponent[] {
+  const header: TemplateComponent = {
+    type: 'header',
+    parameters: [textParam('nombre_tenant', params.nombre_tenant)],
+  };
+
+  if (templateName === 'recordatorio_cupon_vencer') {
+    return [
+      header,
+      {
+        type: 'body',
+        parameters: [
+          textParam('nombre_usuario', params.nombre_usuario),
+          textParam('cupon', params.cupon ?? ''),
+          textParam('fecha_vencimiento', params.fecha_vencimiento ?? ''),
+        ],
+      },
+    ];
+  }
+
+  if (templateName === 'cumpleanos_regalo_tenant') {
+    return [
+      header,
+      {
+        type: 'body',
+        parameters: [
+          textParam('nombre_usuario', params.nombre_usuario),
+          textParam('mes_cumpleanos', params.mes_cumpleanos ?? ''),
+          textParam('regalo_usuario', params.regalo_usuario ?? ''),
+        ],
+      },
+    ];
+  }
+
+  return [header];
+}
+
+function formatGraphError(payload: GraphErrorBody, status: number, accountId: string): string {
+  const parts: string[] = [];
+  const err = payload.error;
+  if (err?.message) parts.push(err.message);
+  if (err?.code != null) parts.push(`code=${err.code}`);
+  if (err?.error_subcode != null) parts.push(`subcode=${err.error_subcode}`);
+  if (err?.fbtrace_id) parts.push(`trace=${err.fbtrace_id}`);
+  if (parts.length === 0) {
+    parts.push(`HTTP ${status} al enviar mensaje (account=${accountId})`);
+  }
+  return parts.join(' | ');
 }
 
 export class WhatsappClient {
@@ -37,14 +109,24 @@ export class WhatsappClient {
   async sendTemplateMessage(row: WhatsappQueueRow): Promise<WhatsappSendResult> {
     const languageCode = row.languageCode || this.defaultLanguageCode;
 
+    if (!row.templateParams) {
+      return {
+        ok: false,
+        error: 'templateParams vacío: no se puede enviar plantilla con variables',
+      };
+    }
+
+    const template: Record<string, unknown> = {
+      name: row.templateName,
+      language: { code: languageCode },
+      components: buildTemplateComponents(row.templateName, row.templateParams),
+    };
+
     const body = {
       messaging_product: 'whatsapp',
       to: row.userPhone,
       type: 'template',
-      template: {
-        name: row.templateName,
-        language: { code: languageCode },
-      },
+      template,
     };
 
     try {
@@ -60,14 +142,10 @@ export class WhatsappClient {
       const payload = (await response.json()) as GraphSuccessBody & GraphErrorBody;
 
       if (!response.ok) {
-        const apiMessage =
-          payload.error?.message ??
-          `HTTP ${response.status} al enviar mensaje (account=${this.accountId})`;
-
         return {
           ok: false,
           statusCode: response.status,
-          error: apiMessage,
+          error: formatGraphError(payload, response.status, this.accountId),
         };
       }
 

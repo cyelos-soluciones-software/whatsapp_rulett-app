@@ -1,6 +1,6 @@
 import { Pool } from 'pg';
 import type { Config } from '../config.js';
-import type { QueueStatus, WhatsappQueueRow } from '../types.js';
+import type { QueueStatus, WhatsappTemplateParams, WhatsappQueueRow } from '../types.js';
 
 const RETURNING_COLUMNS = `
   q.id,
@@ -9,6 +9,7 @@ const RETURNING_COLUMNS = `
   q."userPhone",
   q."userName",
   q."templateName",
+  q."templateParams",
   q."languageCode",
   q.status,
   q."errorLog",
@@ -16,6 +17,30 @@ const RETURNING_COLUMNS = `
   q."updatedAt",
   q."sentAt"
 `;
+
+function parseTemplateParams(raw: unknown): WhatsappTemplateParams | null {
+  if (raw == null) return null;
+  if (typeof raw === 'string') {
+    try {
+      return parseTemplateParams(JSON.parse(raw));
+    } catch {
+      return null;
+    }
+  }
+  if (typeof raw !== 'object') return null;
+  const o = raw as Record<string, unknown>;
+  if (typeof o.nombre_tenant !== 'string' || typeof o.nombre_usuario !== 'string') {
+    return null;
+  }
+  return {
+    nombre_tenant: o.nombre_tenant,
+    nombre_usuario: o.nombre_usuario,
+    cupon: typeof o.cupon === 'string' ? o.cupon : undefined,
+    fecha_vencimiento: typeof o.fecha_vencimiento === 'string' ? o.fecha_vencimiento : undefined,
+    mes_cumpleanos: typeof o.mes_cumpleanos === 'string' ? o.mes_cumpleanos : undefined,
+    regalo_usuario: typeof o.regalo_usuario === 'string' ? o.regalo_usuario : undefined,
+  };
+}
 
 function mapRow(row: Record<string, unknown>): WhatsappQueueRow {
   return {
@@ -25,6 +50,7 @@ function mapRow(row: Record<string, unknown>): WhatsappQueueRow {
     userPhone: String(row.userPhone),
     userName: String(row.userName),
     templateName: String(row.templateName),
+    templateParams: parseTemplateParams(row.templateParams),
     languageCode: String(row.languageCode ?? 'es_CO'),
     status: row.status as QueueStatus,
     errorLog: row.errorLog == null ? null : String(row.errorLog),

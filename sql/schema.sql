@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS "WhatsappQueue" (
 ALTER TABLE "WhatsappQueue" ADD COLUMN IF NOT EXISTS "languageCode" TEXT NOT NULL DEFAULT 'es_CO';
 ALTER TABLE "WhatsappQueue" ADD COLUMN IF NOT EXISTS "errorLog" TEXT;
 ALTER TABLE "WhatsappQueue" ADD COLUMN IF NOT EXISTS "sentAt" TIMESTAMPTZ;
+ALTER TABLE "WhatsappQueue" ADD COLUMN IF NOT EXISTS "templateParams" JSONB;
 
 CREATE INDEX IF NOT EXISTS idx_whatsapp_queue_pending
   ON "WhatsappQueue" (status, "createdAt")
