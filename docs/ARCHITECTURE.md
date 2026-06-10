@@ -1,5 +1,7 @@
 # Arquitectura
 
+> **Fuente canónica:** [../openspec/specs/system_architecture.md](../openspec/specs/system_architecture.md) y [integrations.md](../openspec/specs/integrations.md). Este archivo se mantiene como referencia extendida.
+
 ## Visión general
 
 El worker implementa el patrón **Queue Consumer** con polling periódico **y** disparo HTTP bajo demanda. Se despliega como **Web Service** en Render (puerto HTTP requerido para `/api/trigger`).

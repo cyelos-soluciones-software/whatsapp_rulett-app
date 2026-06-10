@@ -1,5 +1,7 @@
 # Base de datos
 
+> **Fuente canónica:** [../openspec/specs/domain_model.md](../openspec/specs/domain_model.md). Runbook SQL detallado a continuación.
+
 ## Contexto
 
 La base de datos PostgreSQL es **compartida** con la aplicación principal Rulett (ORM: **Prisma**). Este worker **solo lee y actualiza** la tabla `"WhatsappQueue"`. No crea tenants, campañas ni usuarios.

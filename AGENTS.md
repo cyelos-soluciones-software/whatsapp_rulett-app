@@ -1,6 +1,13 @@
 # AGENTS.md — Guía para agentes de IA
 
-> **Propósito:** Este archivo es la fuente de verdad para Cursor, Antigravity y cualquier agente de codificación que retome el proyecto. Léelo completo antes de modificar código.
+> **Propósito:** Reglas de implementación del worker. **Especificaciones canónicas:** [openspec/specs/](./openspec/specs/system_architecture.md). **Cambios en curso:** [openspec/changes/active/](./openspec/changes/active/).
+
+## Lectura obligatoria (orden)
+
+1. [openspec/specs/system_architecture.md](./openspec/specs/system_architecture.md)
+2. [openspec/specs/domain_model.md](./openspec/specs/domain_model.md) — contrato `WhatsappQueue` / `templateParams`
+3. [openspec/changes/active/](./openspec/changes/active/) — SDD antes de codificar features nuevas
+4. App companion: `rulett-app/openspec/` (misma numeración de cambios)
 
 ## Resumen ejecutivo
 
@@ -148,9 +155,12 @@ Detalle: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
 
 | Documento | Contenido |
 |---|---|
+| [`openspec/README.md`](openspec/README.md) | **OpenSpec SDD — fuente canónica** |
+| [`openspec/specs/`](openspec/specs/system_architecture.md) | Arquitectura, dominio, integraciones |
+| [`openspec/changes/active/`](openspec/changes/active/) | SDD de features en curso |
 | [`README.md`](README.md) | Overview humano + quick start |
-| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Diseño, componentes, diagramas |
-| [`docs/DATABASE.md`](docs/DATABASE.md) | Schema, estados, FKs, migraciones |
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Referencia extendida → OpenSpec |
+| [`docs/DATABASE.md`](docs/DATABASE.md) | Runbook SQL → OpenSpec domain_model |
 | [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) | Setup local, scripts, debugging |
 | [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) | Render, Railway, Docker |
 | [`docs/CONVENTIONS.md`](docs/CONVENTIONS.md) | Estándares de código TypeScript |

@@ -6,9 +6,10 @@
 
 | Prioridad | Documento | Descripción |
 |---|---|---|
-| 1 | [../AGENTS.md](../AGENTS.md) | **Leer primero.** Contexto completo para agentes de IA |
-| 2 | [../README.md](../README.md) | Overview y quick start |
-| 3 | [../CONTRIBUTING.md](../CONTRIBUTING.md) | Cómo contribuir |
+| 1 | [../openspec/specs/](../openspec/specs/system_architecture.md) | **OpenSpec SDD — fuente canónica** |
+| 2 | [../AGENTS.md](../AGENTS.md) | Reglas de implementación |
+| 3 | [../README.md](../README.md) | Overview y quick start |
+| 4 | [../CONTRIBUTING.md](../CONTRIBUTING.md) | Cómo contribuir |
 
 ## Documentación técnica
 

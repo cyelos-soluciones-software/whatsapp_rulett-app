@@ -4,6 +4,8 @@ Worker en **Node.js + TypeScript** que consume la cola `"WhatsappQueue"` en Post
 
 Parte del ecosistema **Rulett**: la app principal encola `PENDING` y dispara envío con `POST /api/trigger` (Bearer `WORKER_API_KEY`). El worker también hace **polling** automático.
 
+**Documentación:** [OpenSpec SDD](./openspec/README.md) · [AGENTS.md](./AGENTS.md) · App: [rulett-app/openspec](../rulett-app/openspec/README.md)
+
 ## Quick start
 
 ```bash
