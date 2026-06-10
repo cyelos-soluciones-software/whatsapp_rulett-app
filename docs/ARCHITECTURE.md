@@ -99,3 +99,13 @@ Tenant Admin / Vercel cron
 El cupo `Tenant.maxWhatsappPerMonth` se valida en **rulett-app** al encolar (`queueWhatsappMessages`). Este worker no consulta el límite; procesa registros `PENDING` existentes.
 
 Conteo mensual en Rulett: `status = SENT` y `sentAt >= inicio del mes` (zona Colombia).
+
+## Plantillas Meta y `templateParams`
+
+Rulett pre-calcula el JSON al encolar (`queueWhatsappMessages` + `whatsapp-template-params.ts`). El worker:
+
+1. Lee `templateName` + `templateParams` del row reclamado.
+2. Construye `template.components` (header + body) con `parameter_name`.
+3. `POST https://graph.facebook.com/v25.0/{phoneId}/messages` con `Authorization: Bearer WHATSAPP_TOKEN`.
+
+Si `templateParams` es null → `FAILED` con mensaje explícito en `errorLog` (no llamar a Meta sin variables).

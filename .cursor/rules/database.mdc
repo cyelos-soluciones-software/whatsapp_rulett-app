@@ -19,6 +19,8 @@ FOR UPDATE SKIP LOCKED
 
 ## Columnas del worker
 
-`languageCode`, `errorLog`, `sentAt` — agregadas por `sql/schema.sql`.
+`languageCode`, `errorLog`, `sentAt`, `templateParams` (JSONB) — sync vía `sql/schema.sql` + Prisma en rulett-app.
+
+`templateParams`: JSON con variables Meta (`nombre_tenant`, etc.). Lo inserta rulett-app; el worker solo lee y envía.
 
 Ver `docs/DATABASE.md` para schema completo.

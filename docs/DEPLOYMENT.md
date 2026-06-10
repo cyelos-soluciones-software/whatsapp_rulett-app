@@ -128,7 +128,7 @@ Neon ofrece connection string con pooler (`-pooler` en el host). Recomendado par
 ## Checklist pre-deploy
 
 - [ ] `npm run build` exitoso
-- [ ] `npm run db:schema` ejecutado en BD de producción
+- [ ] `npm run db:schema` ejecutado en BD de producción (incl. columna `templateParams`)
 - [ ] Variables de entorno configuradas (sin commitear `.env`)
 - [ ] `WORKER_API_KEY` idéntica en Render y Vercel (`rulett-app`)
 - [ ] `WHATSAPP_TOKEN` válido y no expirado

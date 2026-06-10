@@ -18,6 +18,7 @@ Cola de mensajes WhatsApp pendientes de envío.
 | `userPhone` | TEXT | NO | Teléfono destino (formato internacional sin `+`) |
 | `userName` | TEXT | NO | Nombre del destinatario |
 | `templateName` | TEXT | NO | Nombre de la plantilla aprobada en Meta |
+| `templateParams` | JSONB | SÍ | Variables pre-calculadas por rulett-app (requerido para envío) |
 | `status` | TEXT | NO | Estado del mensaje (ver máquina de estados) |
 | `languageCode` | TEXT | NO | Código idioma template (default: `es_CO`) |
 | `errorLog` | TEXT | SÍ | Motivo del fallo (max ~4000 chars) |
@@ -26,6 +27,19 @@ Cola de mensajes WhatsApp pendientes de envío.
 | `sentAt` | TIMESTAMPTZ | SÍ | Fecha de envío exitoso |
 
 **Convención Prisma:** nombres en camelCase con comillas dobles en SQL.
+
+### `templateParams` (JSON)
+
+Insertado por **rulett-app** al encolar. El worker **no** calcula variables; solo las envía a Meta.
+
+| Plantilla | Claves JSON |
+|-----------|-------------|
+| `recordatorio_cupon_vencer` | `nombre_tenant`, `nombre_usuario`, `cupon`, `fecha_vencimiento` |
+| `cumpleanos_regalo_tenant` | `nombre_tenant`, `nombre_usuario`, `mes_cumpleanos`, `regalo_usuario` |
+
+Mapeo en `src/services/whatsapp.ts`: `nombre_tenant` → componente `header`; demás → `body` con `parameter_name` (Graph API v25.0).
+
+Columna añadida por Prisma (`db push`) y por `sql/schema.sql` (`ALTER TABLE ... templateParams JSONB`).
 
 ### `"Tenant"` (referencia, no modificada por el worker)
 

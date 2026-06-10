@@ -84,7 +84,8 @@ Ver `.env.example`. **Nunca commitear `.env`.**
 - Tabla: `"WhatsappQueue"` (comillas dobles, camelCase — convención **Prisma**).
 - Status como `TEXT`: `PENDING`, `PROCESSING`, `SENT`, `FAILED`.
 - FKs existentes: `tenantId` → `Tenant`, `qrCampaignId` → `QrCampaign`.
-- Columnas añadidas por el worker: `languageCode`, `errorLog`, `sentAt`.
+- Columnas del worker / sync Prisma: `languageCode`, `errorLog`, `sentAt`, `templateParams` (JSONB).
+- **`templateParams`:** lo escribe rulett-app; este repo solo lo lee y envía a Meta. No recalcular variables aquí.
 - **No renombrar columnas** sin coordinar con el schema Prisma de la app principal.
 - Detalle completo: [`docs/DATABASE.md`](docs/DATABASE.md)
 
@@ -159,7 +160,8 @@ Detalle: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
 
 - Polling + trigger HTTP (`POST /api/trigger` con `Authorization: Bearer WORKER_API_KEY`).
 - `GET /health` para Render/Railway.
-- Claim optimista `FOR UPDATE SKIP LOCKED` y envío Meta Graph API v25.0.
+- Claim optimista `FOR UPDATE SKIP LOCKED` y envío Meta Graph API v25.0 con `components` + `parameter_name`.
+- Plantillas: `recordatorio_cupon_vencer`, `cumpleanos_regalo_tenant` (`es_CO`).
 - Compatible con schema Prisma (`Tenant`, `QrCampaign`, `WhatsappQueue`).
 - Límite mensual por tenant se aplica en **rulett-app** al encolar; el worker solo procesa lo que hay en cola.
 - Docker Compose PostgreSQL local :5440; scripts seed/schema/inspect.

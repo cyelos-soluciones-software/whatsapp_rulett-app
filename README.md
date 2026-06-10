@@ -81,7 +81,9 @@ Copia `.env.example` a `.env` y configura:
 
 **Endpoints:** `GET /health`, `GET|POST /api/trigger` (Bearer `WORKER_API_KEY`).
 
-**Render:** desplegar como **Web Service** (no Background Worker).
+**Plantillas:** lee `templateParams` (JSON) de cada fila y envía variables nombradas a Meta (header: `nombre_tenant`; body: resto según plantilla).
+
+**Render:** desplegar como **Web Service** (no Background Worker). Tras cambio de schema: `npm run db:schema` en la misma BD que rulett-app.
 
 ## Documentación
 
