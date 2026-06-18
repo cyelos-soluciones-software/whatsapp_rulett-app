@@ -53,6 +53,7 @@ function buildTemplateComponents(
         parameters: [
           textParam('nombre_usuario', params.nombre_usuario),
           textParam('cupon', params.cupon ?? ''),
+          textParam('nombre_tenant', params.nombre_tenant),
           textParam('fecha_vencimiento', params.fecha_vencimiento ?? ''),
         ],
       },

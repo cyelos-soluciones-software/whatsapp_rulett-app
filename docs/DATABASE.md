@@ -36,10 +36,10 @@ Insertado por **rulett-app** al encolar. El worker **no** calcula variables; sol
 
 | Plantilla | Claves JSON |
 |-----------|-------------|
-| `recordatorio_cupon_vencer` | `nombre_tenant`, `nombre_usuario`, `cupon`, `fecha_vencimiento` |
+| `recordatorio_cupon_vencer` | header: `nombre_tenant`; body (orden): `nombre_usuario`, `cupon`, `nombre_tenant`, `fecha_vencimiento` |
 | `cumpleanos_regalo_tenant` | `nombre_tenant`, `nombre_usuario`, `mes_cumpleanos`, `regalo_usuario` |
 
-Mapeo en `src/services/whatsapp.ts`: `nombre_tenant` → componente `header`; demás → `body` con `parameter_name` (Graph API v25.0).
+Mapeo en `src/services/whatsapp.ts`: `nombre_tenant` → componente `header` y de nuevo en `body` si la plantilla lo repite; demás claves → `body` con `parameter_name` (Graph API v25.0).
 
 Columna añadida por Prisma (`db push`) y por `sql/schema.sql` (`ALTER TABLE ... templateParams JSONB`).
 
