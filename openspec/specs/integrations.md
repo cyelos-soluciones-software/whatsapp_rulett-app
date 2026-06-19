@@ -15,9 +15,9 @@
 |----------------|----------------|--------------|
 | `recordatorio_cupon_vencer` | `nombre_tenant` | `nombre_usuario`, `cupon`, `nombre_tenant`, `fecha_vencimiento` |
 | `cumpleanos_regalo_tenant` | `nombre_tenant` | `nombre_usuario`, `mes_cumpleanos`, `regalo_usuario` |
-| `invitacion_evento_exclusivo` | — (sin header) | `nombre_usuario`, `nombre_tenant`, `nombre_evento`, `fecha_evento` |
+| `invitacion_evento_exclusivo` | `nombre_tenant` | `nombre_usuario`, `nombre_tenant`, `nombre_evento`, `fecha_evento` |
 
-`nombre_tenant` se repite en header y body cuando la plantilla Meta lo exige (`recordatorio_cupon_vencer`). `invitacion_evento_exclusivo` es **body-only** (4 variables en orden fijo).
+`nombre_tenant` se repite en header y body cuando la plantilla Meta lo exige (`recordatorio_cupon_vencer`, `invitacion_evento_exclusivo`).
 
 ### Troubleshooting Meta
 

@@ -34,7 +34,7 @@ Insertado por **rulett-app**. Worker valida y mapea:
 |-----------|-------------|
 | `recordatorio_cupon_vencer` | header: `nombre_tenant`; body: `nombre_usuario`, `cupon`, `nombre_tenant`, `fecha_vencimiento` |
 | `cumpleanos_regalo_tenant` | header: `nombre_tenant`; body: `nombre_usuario`, `mes_cumpleanos`, `regalo_usuario` |
-| `invitacion_evento_exclusivo` | body only: `nombre_usuario`, `nombre_tenant`, `nombre_evento`, `fecha_evento` |
+| `invitacion_evento_exclusivo` | header: `nombre_tenant`; body: `nombre_usuario`, `nombre_tenant`, `nombre_evento`, `fecha_evento` |
 
 Mapeo en `src/services/whatsapp.ts` con `parameter_name` (Graph API v25.0). Tras cambios: redeploy Render. Cambio: [005](../changes/completed/005-invitacion-evento-whatsapp/closure.md).
 

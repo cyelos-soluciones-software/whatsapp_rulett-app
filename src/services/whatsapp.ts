@@ -76,6 +76,7 @@ function buildTemplateComponents(
 
   if (templateName === 'invitacion_evento_exclusivo') {
     return [
+      header,
       {
         type: 'body',
         parameters: [
