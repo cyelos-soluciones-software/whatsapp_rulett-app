@@ -89,6 +89,22 @@ function buildTemplateComponents(
     ];
   }
 
+  if (templateName === 'promocion_relampago') {
+    return [
+      header,
+      {
+        type: 'body',
+        parameters: [
+          textParam('nombre_tenant', params.nombre_tenant),
+          textParam('nombre_usuario', params.nombre_usuario),
+          textParam('fecha_limite', params.fecha_limite ?? ''),
+          textParam('descuento_promo', params.descuento_promo ?? ''),
+          textParam('producto_servicio', params.producto_servicio ?? ''),
+        ],
+      },
+    ];
+  }
+
   return [header];
 }
 

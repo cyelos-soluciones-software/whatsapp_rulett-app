@@ -9,6 +9,9 @@ export type WhatsappTemplateParams = {
   regalo_usuario?: string;
   nombre_evento?: string;
   fecha_evento?: string;
+  fecha_limite?: string;
+  descuento_promo?: string;
+  producto_servicio?: string;
 };
 
 export interface WhatsappQueueRow {

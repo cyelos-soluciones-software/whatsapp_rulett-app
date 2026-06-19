@@ -41,6 +41,9 @@ function parseTemplateParams(raw: unknown): WhatsappTemplateParams | null {
     regalo_usuario: typeof o.regalo_usuario === 'string' ? o.regalo_usuario : undefined,
     nombre_evento: typeof o.nombre_evento === 'string' ? o.nombre_evento : undefined,
     fecha_evento: typeof o.fecha_evento === 'string' ? o.fecha_evento : undefined,
+    fecha_limite: typeof o.fecha_limite === 'string' ? o.fecha_limite : undefined,
+    descuento_promo: typeof o.descuento_promo === 'string' ? o.descuento_promo : undefined,
+    producto_servicio: typeof o.producto_servicio === 'string' ? o.producto_servicio : undefined,
   };
 }
 
