@@ -7,6 +7,8 @@ export type WhatsappTemplateParams = {
   fecha_vencimiento?: string;
   mes_cumpleanos?: string;
   regalo_usuario?: string;
+  nombre_evento?: string;
+  fecha_evento?: string;
 };
 
 export interface WhatsappQueueRow {

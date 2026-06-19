@@ -74,6 +74,20 @@ function buildTemplateComponents(
     ];
   }
 
+  if (templateName === 'invitacion_evento_exclusivo') {
+    return [
+      {
+        type: 'body',
+        parameters: [
+          textParam('nombre_usuario', params.nombre_usuario),
+          textParam('nombre_tenant', params.nombre_tenant),
+          textParam('nombre_evento', params.nombre_evento ?? ''),
+          textParam('fecha_evento', params.fecha_evento ?? ''),
+        ],
+      },
+    ];
+  }
+
   return [header];
 }
 

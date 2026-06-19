@@ -15,8 +15,9 @@
 |----------------|----------------|--------------|
 | `recordatorio_cupon_vencer` | `nombre_tenant` | `nombre_usuario`, `cupon`, `nombre_tenant`, `fecha_vencimiento` |
 | `cumpleanos_regalo_tenant` | `nombre_tenant` | `nombre_usuario`, `mes_cumpleanos`, `regalo_usuario` |
+| `invitacion_evento_exclusivo` | — (sin header) | `nombre_usuario`, `nombre_tenant`, `nombre_evento`, `fecha_evento` |
 
-`nombre_tenant` se repite en header y body cuando la plantilla Meta lo exige (`recordatorio_cupon_vencer`).
+`nombre_tenant` se repite en header y body cuando la plantilla Meta lo exige (`recordatorio_cupon_vencer`). `invitacion_evento_exclusivo` es **body-only** (4 variables en orden fijo).
 
 ### Troubleshooting Meta
 
@@ -24,9 +25,18 @@
 |--------|------|-------|--------|
 | `190` | 401 | `WHATSAPP_TOKEN` inválido/expirado | Token permanente System User en Render |
 | `131030` | 400 | Destinatario no en lista (modo Dev) | Meta API Setup + OTP; o app Live |
-| `132000` | 400 | Params no coinciden con plantilla | Auditar WhatsApp Manager; fix `whatsapp.ts` |
+| `132000` | 400 | Params no coinciden con plantilla | Auditar WhatsApp Manager; fix `whatsapp.ts`; **deploy Render** |
+| `132005` | 400 | Variable demasiado larga | Acortar `cupon` / `nombre_tenant` (especialmente header) |
 
-Cambio cerrado: [completed/002-whatsapp-template-params](../changes/completed/002-whatsapp-template-params/closure.md).
+### Scripts de verificación
+
+| Script | Uso |
+|--------|-----|
+| `scripts/process-one-batch.ts` | Un lote PENDING (dev; requiere token Meta válido) |
+
+E2E coordinado: rulett-app `scripts/e2e-whatsapp-templates.ts` + trigger `POST /api/trigger`.
+
+Cambios: [002](../changes/completed/002-whatsapp-template-params/closure.md), [005](../changes/completed/005-invitacion-evento-whatsapp/closure.md).
 
 ## rulett-app (trigger)
 

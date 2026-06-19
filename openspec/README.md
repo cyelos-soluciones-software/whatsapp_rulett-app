@@ -20,7 +20,7 @@ openspec/
 ## Relación con rulett-app
 
 - **Base de datos compartida** (Neon): tabla `"WhatsappQueue"` escrita por rulett-app, consumida por este worker.
-- Cambios de contrato (ej. `templateParams`) deben numerarse igual en ambos repos (`002-whatsapp-template-params`).
+- Cambios de contrato (ej. `templateParams`, nuevas plantillas) deben numerarse igual en ambos repos (`002-whatsapp-template-params`, `005-invitacion-evento-whatsapp`).
 - OpenSpec app: `rulett-app/openspec/`.
 
 ## Flujo

@@ -34,6 +34,10 @@ npm run db:inspect   # inspección cola
 3. Deploy Render + actualizar `WHATSAPP_TOKEN` si aplica
 4. Smoke: encolar + trigger → verificar `SENT`
 
+**Importante:** rulett-app en local usa `localhost:5440`; Render usa **Neon**. E2E coordinado desde rulett-app (`scripts/e2e-whatsapp-templates.ts`) debe encolar en Neon. Tras cambios en `src/services/whatsapp.ts`: **redeploy Render** (sin deploy → `#132000` en plantillas nuevas).
+
+Cambios: [002](../changes/completed/002-whatsapp-template-params/closure.md), [005](../changes/completed/005-invitacion-evento-whatsapp/closure.md).
+
 ### Reencolar FAILED
 
 ```sql

@@ -1,6 +1,6 @@
 # AGENTS.md — Guía para agentes de IA
 
-> **Propósito:** Reglas de implementación del worker. **Especificaciones canónicas:** [openspec/specs/](./openspec/specs/system_architecture.md). **Cambios:** [active/](./openspec/changes/active/) · [completed/](./openspec/changes/completed/) (último: `002-whatsapp-template-params`).
+> **Propósito:** Reglas de implementación del worker. **Especificaciones canónicas:** [openspec/specs/](./openspec/specs/system_architecture.md). **Cambios:** [active/](./openspec/changes/active/) · [completed/](./openspec/changes/completed/) (últimos: `002-whatsapp-template-params`, `005-invitacion-evento-whatsapp`).
 
 ## Lectura obligatoria (orden)
 
@@ -158,6 +158,7 @@ Detalle: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
 | [`openspec/README.md`](openspec/README.md) | **OpenSpec SDD — fuente canónica** |
 | [`openspec/specs/`](openspec/specs/system_architecture.md) | Arquitectura, dominio, integraciones |
 | [`openspec/changes/completed/002-whatsapp-template-params/`](openspec/changes/completed/002-whatsapp-template-params/) | Cerrado PDN 2026-06-18 |
+| [`openspec/changes/completed/005-invitacion-evento-whatsapp/`](openspec/changes/completed/005-invitacion-evento-whatsapp/) | Código 2026-06-19; deploy Render pendiente E2E invitación |
 | [`openspec/changes/active/`](openspec/changes/active/) | SDD de features en curso |
 | [`README.md`](README.md) | Overview humano + quick start |
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Referencia extendida → OpenSpec |
@@ -172,7 +173,7 @@ Detalle: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
 - Polling + trigger HTTP (`POST /api/trigger` con `Authorization: Bearer WORKER_API_KEY`).
 - `GET /health` para Render/Railway.
 - Claim optimista `FOR UPDATE SKIP LOCKED` y envío Meta Graph API v25.0 con `components` + `parameter_name`.
-- Plantillas: `recordatorio_cupon_vencer`, `cumpleanos_regalo_tenant` (`es_CO`).
+- Plantillas: `recordatorio_cupon_vencer`, `cumpleanos_regalo_tenant`, `invitacion_evento_exclusivo` (`es_CO`). La invitación es body-only (sin header).
 - Compatible con schema Prisma (`Tenant`, `QrCampaign`, `WhatsappQueue`).
 - Límite mensual por tenant se aplica en **rulett-app** al encolar; el worker solo procesa lo que hay en cola.
 - Docker Compose PostgreSQL local :5440; scripts seed/schema/inspect.

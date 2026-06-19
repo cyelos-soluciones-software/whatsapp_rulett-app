@@ -39,6 +39,8 @@ function parseTemplateParams(raw: unknown): WhatsappTemplateParams | null {
     fecha_vencimiento: typeof o.fecha_vencimiento === 'string' ? o.fecha_vencimiento : undefined,
     mes_cumpleanos: typeof o.mes_cumpleanos === 'string' ? o.mes_cumpleanos : undefined,
     regalo_usuario: typeof o.regalo_usuario === 'string' ? o.regalo_usuario : undefined,
+    nombre_evento: typeof o.nombre_evento === 'string' ? o.nombre_evento : undefined,
+    fecha_evento: typeof o.fecha_evento === 'string' ? o.fecha_evento : undefined,
   };
 }
 

@@ -83,9 +83,9 @@ Copia `.env.example` a `.env` y configura:
 
 **Endpoints:** `GET /health`, `GET|POST /api/trigger` (Bearer `WORKER_API_KEY`).
 
-**Plantillas:** lee `templateParams` (JSON) de cada fila y envía variables nombradas a Meta (header: `nombre_tenant`; body: resto según plantilla).
+**Plantillas (`es_CO`):** `recordatorio_cupon_vencer`, `cumpleanos_regalo_tenant`, `invitacion_evento_exclusivo` (body-only). Lee `templateParams` JSON y envía `components` con `parameter_name` a Meta.
 
-**Render:** desplegar como **Web Service** (no Background Worker). Tras cambio de schema: `npm run db:schema` en la misma BD que rulett-app.
+**Deploy:** tras cambios en mapeo de plantillas, redeploy Render. E2E coordinado desde rulett-app — ver [openspec/changes/completed/005-invitacion-evento-whatsapp/closure.md](./openspec/changes/completed/005-invitacion-evento-whatsapp/closure.md).
 
 ## Documentación
 
