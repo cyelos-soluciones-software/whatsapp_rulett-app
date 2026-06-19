@@ -1,7 +1,7 @@
 # ADR-002: Worker no calcula variables de plantilla
 
 **Estado:** Aceptado (compartido)  
-**Ver:** `rulett-app/openspec/changes/active/002-whatsapp-template-params/adr.md`
+**Ver:** `rulett-app/openspec/changes/completed/002-whatsapp-template-params/adr.md`
 
 ## Decisión worker
 

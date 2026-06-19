@@ -33,9 +33,9 @@ Insertado por **rulett-app**. Worker valida y mapea:
 | Plantilla | Claves JSON |
 |-----------|-------------|
 | `recordatorio_cupon_vencer` | header: `nombre_tenant`; body: `nombre_usuario`, `cupon`, `nombre_tenant`, `fecha_vencimiento` |
-| `cumpleanos_regalo_tenant` | `nombre_tenant`, `nombre_usuario`, `mes_cumpleanos`, `regalo_usuario` |
+| `cumpleanos_regalo_tenant` | header: `nombre_tenant`; body: `nombre_usuario`, `mes_cumpleanos`, `regalo_usuario` |
 
-Mapeo: `nombre_tenant` → header; demás → body (`parameter_name`).
+Mapeo en `src/services/whatsapp.ts` con `parameter_name` (Graph API v25.0).
 
 ## Migraciones worker
 

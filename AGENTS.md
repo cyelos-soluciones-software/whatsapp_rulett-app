@@ -1,6 +1,6 @@
 # AGENTS.md — Guía para agentes de IA
 
-> **Propósito:** Reglas de implementación del worker. **Especificaciones canónicas:** [openspec/specs/](./openspec/specs/system_architecture.md). **Cambios en curso:** [openspec/changes/active/](./openspec/changes/active/).
+> **Propósito:** Reglas de implementación del worker. **Especificaciones canónicas:** [openspec/specs/](./openspec/specs/system_architecture.md). **Cambios:** [active/](./openspec/changes/active/) · [completed/](./openspec/changes/completed/) (último: `002-whatsapp-template-params`).
 
 ## Lectura obligatoria (orden)
 
@@ -157,6 +157,7 @@ Detalle: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
 |---|---|
 | [`openspec/README.md`](openspec/README.md) | **OpenSpec SDD — fuente canónica** |
 | [`openspec/specs/`](openspec/specs/system_architecture.md) | Arquitectura, dominio, integraciones |
+| [`openspec/changes/completed/002-whatsapp-template-params/`](openspec/changes/completed/002-whatsapp-template-params/) | Cerrado PDN 2026-06-18 |
 | [`openspec/changes/active/`](openspec/changes/active/) | SDD de features en curso |
 | [`README.md`](README.md) | Overview humano + quick start |
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Referencia extendida → OpenSpec |

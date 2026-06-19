@@ -31,8 +31,18 @@ npm run db:inspect   # inspección cola
 
 1. rulett-app: `prisma db push` (columna `templateParams`)
 2. worker: `npm run db:schema`
-3. Deploy Render + redeploy Vercel
-4. Smoke: encolar 1 mensaje + trigger
+3. Deploy Render + actualizar `WHATSAPP_TOKEN` si aplica
+4. Smoke: encolar + trigger → verificar `SENT`
+
+### Reencolar FAILED
+
+```sql
+UPDATE "WhatsappQueue"
+SET status = 'PENDING', "errorLog" = NULL, "updatedAt" = NOW()
+WHERE status = 'FAILED';
+```
+
+Ver [integrations.md](./integrations.md) troubleshooting Meta.
 
 ## Local
 
