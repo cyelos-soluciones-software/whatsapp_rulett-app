@@ -9,4 +9,4 @@
 - [x] Actualizar `docs/ARCHITECTURE.md` como puntero
 - [x] Actualizar `docs/DATABASE.md` — enlace a domain_model
 - [x] Actualizar `AGENTS.md` y `README.md`
-- [ ] Mover a `completed/` tras revisión conjunta con rulett-app
+- [x] Mover a `completed/` tras revisión conjunta con rulett-app

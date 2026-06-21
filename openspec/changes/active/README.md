@@ -2,8 +2,8 @@
 
 | ID | Estado |
 |----|--------|
-| [001-openspec-foundation](./001-openspec-foundation/) | Migración documental OpenSpec |
+| _(ninguno)_ | — |
 
-**Completados recientes:** [005-invitacion-evento-whatsapp](../completed/005-invitacion-evento-whatsapp/) (deploy Render pendiente para E2E invitación).
+**Completados recientes:** [001-openspec-foundation](../completed/001-openspec-foundation/) (fundación SDD), [005-invitacion-evento-whatsapp](../completed/005-invitacion-evento-whatsapp/) (deploy Render pendiente E2E invitación).
 
 Canónico de cambios cerrados: [completed/](../completed/).
