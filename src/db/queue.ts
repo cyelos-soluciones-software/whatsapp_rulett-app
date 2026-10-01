@@ -1,6 +1,15 @@
 import { Pool } from 'pg';
 import type { Config } from '../config.js';
-import type { QueueStatus, WhatsappTemplateParams, WhatsappQueueRow } from '../types.js';
+import {
+  SUBSCRIPTION_REMINDER_7D_TEMPLATE,
+  SUBSCRIPTION_REMINDER_DUE_DAY_TEMPLATE,
+} from '../types.js';
+import type {
+  QueueStatus,
+  SubscriptionReminderTemplateParams,
+  WhatsappTemplateParams,
+  WhatsappQueueRow,
+} from '../types.js';
 
 const RETURNING_COLUMNS = `
   q.id,
@@ -18,17 +27,42 @@ const RETURNING_COLUMNS = `
   q."sentAt"
 `;
 
-function parseTemplateParams(raw: unknown): WhatsappTemplateParams | null {
+function nonEmptyString(value: unknown): value is string {
+  return typeof value === 'string' && value.trim() !== '';
+}
+
+function parseSubscriptionReminderParams(
+  templateName: string,
+  o: Record<string, unknown>,
+): SubscriptionReminderTemplateParams | null {
+  if (!nonEmptyString(o.nombre_comercio)) return null;
+  if (templateName === SUBSCRIPTION_REMINDER_7D_TEMPLATE) {
+    if (!nonEmptyString(o.dias)) return null;
+    return { nombre_comercio: o.nombre_comercio, dias: o.dias };
+  }
+  return { nombre_comercio: o.nombre_comercio };
+}
+
+export function parseTemplateParams(
+  raw: unknown,
+  templateName: string,
+): WhatsappTemplateParams | null {
   if (raw == null) return null;
   if (typeof raw === 'string') {
     try {
-      return parseTemplateParams(JSON.parse(raw));
+      return parseTemplateParams(JSON.parse(raw), templateName);
     } catch {
       return null;
     }
   }
   if (typeof raw !== 'object') return null;
   const o = raw as Record<string, unknown>;
+  if (
+    templateName === SUBSCRIPTION_REMINDER_7D_TEMPLATE ||
+    templateName === SUBSCRIPTION_REMINDER_DUE_DAY_TEMPLATE
+  ) {
+    return parseSubscriptionReminderParams(templateName, o);
+  }
   if (typeof o.nombre_tenant !== 'string' || typeof o.nombre_usuario !== 'string') {
     return null;
   }
@@ -47,15 +81,16 @@ function parseTemplateParams(raw: unknown): WhatsappTemplateParams | null {
   };
 }
 
-function mapRow(row: Record<string, unknown>): WhatsappQueueRow {
+export function mapRow(row: Record<string, unknown>): WhatsappQueueRow {
+  const templateName = String(row.templateName);
   return {
     id: String(row.id),
     tenantId: String(row.tenantId),
-    qrCampaignId: String(row.qrCampaignId),
+    qrCampaignId: row.qrCampaignId == null ? null : String(row.qrCampaignId),
     userPhone: String(row.userPhone),
     userName: String(row.userName),
-    templateName: String(row.templateName),
-    templateParams: parseTemplateParams(row.templateParams),
+    templateName,
+    templateParams: parseTemplateParams(row.templateParams, templateName),
     languageCode: String(row.languageCode ?? 'es_CO'),
     status: row.status as QueueStatus,
     errorLog: row.errorLog == null ? null : String(row.errorLog),

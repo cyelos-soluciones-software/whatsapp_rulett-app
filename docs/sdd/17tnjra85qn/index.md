@@ -1,0 +1,42 @@
+SDD: 17tnjra85qn · v8 · 2026-10-01
+
+# Índice — 17tnjra85qn
+
+estado: aprobado [humano, 2026-10-01]. La v6 se revisó contra el repo y se lanza así.
+
+ClickUp: [Recordar el pago de la suscripción, caber el juego en una pantalla y filtrar lo que hay cerca](https://app.clickup.com/t/9013064238/17tnjra85qn)
+
+Historia local: [proyecto: historias/lote-suscripcion-juego-descubre/historia.md]
+
+El humano pidió un solo SDD para los tres flujos. [humano, 2026-09-30]
+
+ClickUp no se pudo leer desde esta sesión (subtareas, comentarios, relaciones). Si la tarjeta contradice la historia local, este SDD está mal y hay que parar.
+
+## Repos
+
+| Repo | Qué hace | Tasks |
+|---|---|---|
+| rulett-app | Esquema, aviso, SMS, juego, Descubre | T-01 … T-12 |
+| whatsapp_rulett-app | Pruebas, mapeo, campaña nula, docs y prueba en Render | W-00 … W-04 |
+
+## Orden de despliegue
+
+1. Migración de rulett-app (T-01) aplicada por el implementador solo en Docker local. Lab y producción las aplica el humano, antes de encender el flag. Las filas viejas siguen siendo de comercio: `origin` sale en `TENANT`.
+2. Worker (W-00 … W-03) en Render, antes del primer aviso por WhatsApp.
+3. rulett-app (T-02 … T-11). El cron del aviso no encola hasta `SUBSCRIPTION_REMINDERS_ENABLED=true`.
+4. Plantillas en Meta (no es código). Hasta que Meta las apruebe, el WhatsApp falla y el SMS de respaldo sí sale. [proyecto: historias/lote-suscripcion-juego-descubre/historia.md]
+5. W-04: redesplegar el worker, aplicar T-01 en laboratorio y producción, probar una fila de plataforma. En el log de ese mismo redespliegue se anota la versión de Node que tomó Render y se comprueba que `/health` responde. Solo después se enciende el flag.
+
+Juego (T-08) y Descubre (T-09 … T-11) no esperan al worker. Pueden ir en el mismo release o después, dentro de esta misma historia.
+
+## Versión
+
+v8. En la ficha de página de Descubre y en el menú público de esa sede, un botón «Cómo llegar» abre la app de mapas del celular hacia las coordenadas de la sede. No reemplaza «Ver página». Las ruletas no lo llevan. Task T-12, todavía sin implementar. [humano, 2026-10-01]
+
+v7. T-01 a T-11 están implementadas en local, sin commit. La migración `20261001114819_subscription_reminders_discovery` quedó solo en Docker. El flag sigue apagado. Desviaciones aceptadas en `decisions.md`. [implementador, 2026-10-01]
+
+v6, lanzada [humano, 2026-10-01]. Revisada contra el repo: sin `.nvmrc` ni `.node-version`; `.env` ignorado; `package.json` sigue en `>=20.0.0` hasta que el implementador lo suba. Nota que no bloquea: en ese mismo cambio puede alinear `AGENTS.md`, que marca `POLL_INTERVAL_MS` como requerida aunque el código no falla si falta. `WHATSAPP_LANGUAGE_CODE` usa `es_CO` si no está definida. [repo: src/config.ts] [repo: AGENTS.md]
+
+v6. `engines.node` queda en `>=22.5.0`. `--test-coverage-include` existe desde Node 22.5.0, así que `>=22` dejaría pasar 22.0–22.4 y `npm run test:coverage` fallaría igual. El script no se cambia. No hay `.nvmrc` ni `.node-version`: Render elige Node desde `engines.node`, así que el redespliegue de W-04 corre en otra versión mayor. No es un cambio neutro; el worker usa `fetch` nativo y `pg`. [humano, 2026-10-01] [repo: whatsapp_rulett-app/package.json]
+
+v5. W-00 a W-03 del worker están implementadas y coinciden con v4. [humano, 2026-10-01]

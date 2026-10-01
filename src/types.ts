@@ -1,6 +1,14 @@
 export type QueueStatus = 'PENDING' | 'PROCESSING' | 'SENT' | 'FAILED';
 
-export type WhatsappTemplateParams = {
+export const SUBSCRIPTION_REMINDER_7D_TEMPLATE = 'recordatorio_suscripcion_7d';
+export const SUBSCRIPTION_REMINDER_DUE_DAY_TEMPLATE = 'recordatorio_suscripcion_hoy';
+
+export type SubscriptionReminderTemplateParams = {
+  nombre_comercio: string;
+  dias?: string;
+};
+
+export type TenantTemplateParams = {
   nombre_tenant: string;
   nombre_usuario: string;
   cupon?: string;
@@ -14,10 +22,12 @@ export type WhatsappTemplateParams = {
   producto_servicio?: string;
 };
 
+export type WhatsappTemplateParams = TenantTemplateParams | SubscriptionReminderTemplateParams;
+
 export interface WhatsappQueueRow {
   id: string;
   tenantId: string;
-  qrCampaignId: string;
+  qrCampaignId: string | null;
   userPhone: string;
   userName: string;
   templateName: string;

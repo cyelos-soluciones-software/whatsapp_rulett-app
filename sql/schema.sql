@@ -21,6 +21,10 @@ ALTER TABLE "WhatsappQueue" ADD COLUMN IF NOT EXISTS "errorLog" TEXT;
 ALTER TABLE "WhatsappQueue" ADD COLUMN IF NOT EXISTS "sentAt" TIMESTAMPTZ;
 ALTER TABLE "WhatsappQueue" ADD COLUMN IF NOT EXISTS "templateParams" JSONB;
 
+-- Filas origin PLATFORM (aviso de suscripción) van sin campaña. Solo Docker local:
+-- en Neon la columna la cambia la migración Prisma de rulett-app.
+ALTER TABLE "WhatsappQueue" ALTER COLUMN "qrCampaignId" DROP NOT NULL;
+
 CREATE INDEX IF NOT EXISTS idx_whatsapp_queue_pending
   ON "WhatsappQueue" (status, "createdAt")
   WHERE status = 'PENDING';

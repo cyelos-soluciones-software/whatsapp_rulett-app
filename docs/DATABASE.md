@@ -16,9 +16,9 @@ Cola de mensajes WhatsApp pendientes de envío.
 |---|---|---|---|
 | `id` | TEXT | NO | PK (UUID/cuid generado por Prisma) |
 | `tenantId` | TEXT | NO | FK → `"Tenant".id` |
-| `qrCampaignId` | TEXT | NO | FK → `"QrCampaign".id` |
-| `userPhone` | TEXT | NO | Teléfono destino (formato internacional sin `+`) |
-| `userName` | TEXT | NO | Nombre del destinatario |
+| `qrCampaignId` | TEXT | SÍ | FK → `"QrCampaign".id`. Null en filas `origin = PLATFORM` (aviso de suscripción) |
+| `userPhone` | TEXT | NO | Teléfono destino (formato internacional sin `+`). Los logs del worker solo muestran los últimos 4 dígitos |
+| `userName` | TEXT | NO | Nombre del destinatario (en el aviso de suscripción, el del comercio) |
 | `templateName` | TEXT | NO | Nombre de la plantilla aprobada en Meta |
 | `templateParams` | JSONB | SÍ | Variables pre-calculadas por rulett-app (requerido para envío) |
 | `status` | TEXT | NO | Estado del mensaje (ver máquina de estados) |
@@ -38,10 +38,18 @@ Insertado por **rulett-app** al encolar. El worker **no** calcula variables; sol
 |-----------|-------------|
 | `recordatorio_cupon_vencer` | header: `nombre_tenant`; body (orden): `nombre_usuario`, `cupon`, `nombre_tenant`, `fecha_vencimiento` |
 | `cumpleanos_regalo_tenant` | `nombre_tenant`, `nombre_usuario`, `mes_cumpleanos`, `regalo_usuario` |
+| `invitacion_evento_exclusivo` | header: `nombre_tenant`; body: `nombre_usuario`, `nombre_tenant`, `nombre_evento`, `fecha_evento` |
+| `promocion_relampago` | header: `nombre_tenant`; body: `nombre_tenant`, `nombre_usuario`, `fecha_limite`, `descuento_promo`, `producto_servicio` |
+| `recordatorio_suscripcion_7d` | sin header; body: `nombre_comercio`, `dias` (texto `"7"`) |
+| `recordatorio_suscripcion_hoy` | sin header; body: `nombre_comercio` |
 
-Mapeo en `src/services/whatsapp.ts`: `nombre_tenant` → componente `header` y de nuevo en `body` si la plantilla lo repite; demás claves → `body` con `parameter_name` (Graph API v25.0).
+Mapeo en `src/services/whatsapp.ts`: `nombre_tenant` → componente `header` y de nuevo en `body` si la plantilla lo repite; demás claves → `body` con `parameter_name` (Graph API v25.0). Los avisos de suscripción van solo con body; el botón URL estático no viaja en el POST.
+
+Validación por plantilla en `parseTemplateParams` (`src/db/queue.ts`): si faltan las claves que exige esa plantilla, `templateParams` queda null y la fila pasa a `FAILED` sin llamar a Meta.
 
 Columna añadida por Prisma (`db push`) y por `sql/schema.sql` (`ALTER TABLE ... templateParams JSONB`).
+
+`qrCampaignId` nullable: en Neon lo cambia la migración Prisma de rulett-app. `sql/schema.sql` hace `DROP NOT NULL` solo para el Docker local; **no** correr `npm run db:schema` contra Neon.
 
 ### `"Tenant"` (referencia, no modificada por el worker)
 
