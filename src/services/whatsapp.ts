@@ -1,5 +1,11 @@
 import type { Config } from '../config.js';
-import type { WhatsappQueueRow, WhatsappSendResult, WhatsappTemplateParams } from '../types.js';
+import { SUBSCRIPTION_REMINDER_7D_TEMPLATE } from '../types.js';
+import type {
+  SubscriptionReminderTemplateParams,
+  WhatsappQueueRow,
+  WhatsappSendResult,
+  WhatsappTemplateParams,
+} from '../types.js';
 
 const GRAPH_API_VERSION = 'v25.0';
 
@@ -36,10 +42,25 @@ function textParam(parameterName: string, value: string): TemplateTextParameter 
   };
 }
 
+function buildSubscriptionReminderComponents(
+  templateName: string,
+  params: SubscriptionReminderTemplateParams,
+): TemplateComponent[] {
+  const parameters = [textParam('nombre_comercio', params.nombre_comercio)];
+  if (templateName === SUBSCRIPTION_REMINDER_7D_TEMPLATE) {
+    parameters.push(textParam('dias', params.dias ?? ''));
+  }
+  return [{ type: 'body', parameters }];
+}
+
 function buildTemplateComponents(
   templateName: string,
   params: WhatsappTemplateParams,
 ): TemplateComponent[] {
+  if ('nombre_comercio' in params) {
+    return buildSubscriptionReminderComponents(templateName, params);
+  }
+
   const header: TemplateComponent = {
     type: 'header',
     parameters: [textParam('nombre_tenant', params.nombre_tenant)],

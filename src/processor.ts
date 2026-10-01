@@ -1,4 +1,5 @@
 import type { QueueRepository } from './db/queue.js';
+import { maskPhone } from './lib/mask-phone.js';
 import type { WhatsappClient } from './services/whatsapp.js';
 import type { WhatsappQueueRow } from './types.js';
 
@@ -21,7 +22,7 @@ async function processRow(
     queueId: row.id,
     tenantId: row.tenantId,
     campaignId: row.qrCampaignId,
-    userPhone: row.userPhone,
+    userPhone: maskPhone(row.userPhone),
     userName: row.userName,
     templateName: row.templateName,
   });

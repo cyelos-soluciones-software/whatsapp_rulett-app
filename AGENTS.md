@@ -104,8 +104,10 @@ npm run build        # Compilar TypeScript → dist/
 npm start            # Producción (dist/index.js)
 npm run dev          # Desarrollo con hot-reload (tsx)
 npm run typecheck    # Verificar tipos sin compilar
+npm test             # Pruebas node:test + tsx (test/*.test.ts, fuera de src/)
+npm run test:coverage # Igual, con cobertura de src/
 
-npm run db:schema    # Aplicar migraciones del worker
+npm run db:schema    # Aplicar migraciones del worker (solo Docker local, nunca Neon)
 npm run db:seed      # Insertar registros PENDING de prueba
 npm run db:inspect   # Ver tenants, campañas y cola
 npm run db:setup     # Docker up + schema + seed
@@ -173,11 +175,13 @@ Detalle: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
 - Polling + trigger HTTP (`POST /api/trigger` con `Authorization: Bearer WORKER_API_KEY`).
 - `GET /health` para Render/Railway.
 - Claim optimista `FOR UPDATE SKIP LOCKED` y envío Meta Graph API v25.0 con `components` + `parameter_name`.
-- Plantillas: `recordatorio_cupon_vencer`, `cumpleanos_regalo_tenant`, `invitacion_evento_exclusivo` (`es_CO`). La invitación es body-only (sin header).
+- Plantillas de comercio (header `nombre_tenant` + body): `recordatorio_cupon_vencer`, `cumpleanos_regalo_tenant`, `invitacion_evento_exclusivo`, `promocion_relampago` (`es_CO`).
+- Avisos de suscripción (solo body, `origin = PLATFORM`, `qrCampaignId` null): `recordatorio_suscripcion_7d`, `recordatorio_suscripcion_hoy` — SDD `docs/sdd/17tnjra85qn/`. `parseTemplateParams` valida por plantilla.
+- Logs: `userPhone` enmascarado (últimos 4 dígitos).
 - Compatible con schema Prisma (`Tenant`, `QrCampaign`, `WhatsappQueue`).
 - Límite mensual por tenant se aplica en **rulett-app** al encolar; el worker solo procesa lo que hay en cola.
 - Docker Compose PostgreSQL local :5440; scripts seed/schema/inspect.
-- Sin tests automatizados aún.
+- Tests unitarios con `node:test` + `tsx` en `test/` (`npm test`, `npm run test:coverage`); sin dependencias nuevas. Mocks: `fetch` global y repositorio/cliente falsos, sin BD.
 
 ## Puntos de extensión futuros (no implementados)
 
