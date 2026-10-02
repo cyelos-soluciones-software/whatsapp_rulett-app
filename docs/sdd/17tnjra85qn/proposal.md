@@ -1,4 +1,4 @@
-SDD: 17tnjra85qn · v8 · 2026-10-01
+SDD: 17tnjra85qn · v11 · 2026-10-01
 
 # Propuesta
 
@@ -20,11 +20,15 @@ Lo de la historia local, sin ampliarlo:
 - La prueba gratis entra mientras `expiresAt` no haya pasado.
 - El aviso no cuenta en el cupo del comercio.
 - Juego: textos acordados y título más acción visibles sin scroll en un viewport de 390×844.
-- Descubre: fichas de ruleta y de página, filtros, 15 km, página pública y billetera. La página se publica solo con ubicación de esa sede. La ficha de página y su menú público ofrecen «Cómo llegar», que abre la app de mapas del celular en esa sede. [humano, 2026-10-01]
+- Descubre: fichas de ruleta y de página, filtros, 15 km, página pública y billetera. La casilla de publicar nace marcada; sin GPS de esa sede la página no sale. La ficha de página y su menú público ofrecen «Cómo llegar», que abre la app de mapas del celular en esa sede. [humano, 2026-10-01] [humano, 2026-10-01 v9]
+
+## Ajuste v9
+
+[humano, 2026-10-01] La página entra a Descubre marcada, también las que ya existen y las que nacen en el alta de 14 días o de super admin. El comercio la apaga si no la quiere. Los cupones que ese alta crea quedan en la sede creada ahí. El botón de cupones con IA del panel sigue sin sede. En la ficha de página se ve la sede y, si el menú de esa sede tiene ofertas, cuántas.
 
 ## No alcance
 
-Avisos ya vencida, otros teléfonos, app nativa, cambiar los 15 km, enlace a la página dentro de la ficha de la ruleta, tablero de métricas para el comercio, reescribir el premio guardado, webhook de entrega de WhatsApp.
+Avisos ya vencida, otros teléfonos, app nativa, cambiar los 15 km, enlace a la página dentro de la ficha de la ruleta, tablero de métricas para el comercio, reescribir el premio guardado, webhook de entrega de WhatsApp. No se reasignan cupones ya creados. No se asocia sede al botón de cupones con IA del panel.
 
 ## Usuarios
 
@@ -36,7 +40,7 @@ Los escenarios de [proyecto: historias/lote-suscripcion-juego-descubre/historia.
 
 ## Orden nacional de Descubre
 
-[humano, 2026-09-30] [humano, 2026-10-01] Las páginas no tienen jugadas. En el listado nacional se ordenan por `listedInDiscoveryAt` (el instante en que se publicaron en Descubre), no por la creación de la página. Con el filtro «todas», van detrás de las ruletas. Las ruletas siguen ordenadas por jugadas. El listado, nacional o local, corta en 12 fichas en total.
+[humano, 2026-09-30] [humano, 2026-10-01] Las páginas no tienen jugadas. En el listado nacional se ordenan por `listedInDiscoveryAt`, no por `updatedAt`. Con el filtro «todas», van detrás de las ruletas. Las ruletas siguen ordenadas por jugadas. El listado, nacional o local, corta en 12 fichas en total. v9: si una página vieja no tenía instante, el relleno usa su `createdAt` para no amontonarlas en el minuto de la migración.
 
 ## Riesgos
 

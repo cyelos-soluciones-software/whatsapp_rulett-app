@@ -1,4 +1,4 @@
-SDD: 17tnjra85qn · v8 · 2026-10-01
+SDD: 17tnjra85qn · v11 · 2026-10-01
 
 # Diseño
 
@@ -79,8 +79,11 @@ Migración solo en rulett-app. El worker no migra. [repo: rulett-app/openspec/sp
 
 `BranchLanding`
 
-- `listedInDiscovery Boolean @default(false)`.
-- `listedInDiscoveryAt DateTime?`. Se escribe al pasar el flag a true y se borra al pasarlo a false. El listado nacional de páginas ordena por este instante, no por `createdAt` ni por `updatedAt`.
+- `listedInDiscovery Boolean @default(true)`. v8 lo dejó en false; v9 lo invierte. [humano, 2026-10-01]
+- `listedInDiscoveryAt DateTime?`. Se escribe al pasar el flag a true y se borra al pasarlo a false. El listado nacional de páginas ordena por este instante.
+- Relleno, en una migración nueva (no se edita `20261001114819_subscription_reminders_discovery`): toda `BranchLanding` queda con `listedInDiscovery = true`. Si `listedInDiscoveryAt` ya tiene valor, se conserva. Si está nulo, se copia `createdAt`, para no dejar todas las páginas viejas con el mismo instante de la migración. El implementador la aplica solo en Docker local. Lab y producción las aplica el humano. [humano, 2026-10-01]
+- Alta de super admin y alta de 14 días crean la landing por `bootstrapTenantRecords`. Esa creación deja el flag en true y el instante en ese momento. Lo mismo al crear una landing después, desde el admin del comercio. [repo: rulett-app/src/lib/tenant-bootstrap.ts] [repo: rulett-app/src/actions/superadmin/tenant.ts] [repo: rulett-app/src/actions/self-signup.ts]
+- Sin latitud y longitud de esa sede la página no entra a la consulta de Descubre, aunque el flag esté en true. La casilla sigue marcada y se puede guardar. El texto del formulario dice que, sin esa ubicación, no sale en el listado. Al cargar el GPS después, sale sin volver a marcar la casilla. Apagarla borra el instante. [humano, 2026-10-01]
 
 No se añade columna de estado a la suscripción. Sigue siendo `expiresAt`. [repo: rulett-app/openspec/specs/domain_model.md]
 
@@ -145,7 +148,7 @@ Prueba de layout: viewport 390×844 sobre los cuatro pasos. Vitest no demuestra 
 
 Ruleta: lo de hoy (`isPubliclyVisible`, comercio `isActive`, sedes con GPS) más exclusión si `isSubscriptionBillingExpired`.
 
-Página: `BranchLanding.isActive`, `listedInDiscovery`, la sede activa con latitud y longitud, comercio `isActive`, suscripción no vencida. Distancia = esa sede, no la más cercana de varias. Radio 15 km. [repo: rulett-app/src/lib/discovery-geo.ts]
+Página: `BranchLanding.isActive`, `listedInDiscovery`, la sede activa con latitud y longitud, comercio `isActive`, suscripción no vencida. Distancia = esa sede, no la más cercana de varias. Radio 15 km. Flag en true y sede sin GPS: no sale. [repo: rulett-app/src/lib/discovery-geo.ts] [humano, 2026-10-01]
 
 Filtros `type` (`all` | `roulette` | `page`) y `categoryId` de `TenantCategory`. Sin categoría: solo en `all`.
 
@@ -159,7 +162,26 @@ Cómo llegar. La ficha de página muestra «A {n} km de ti» y no ofrece ir. [hu
 - En Android abre `geo:` para la app de mapas predeterminada. En iPhone abre Mapas de Apple. En escritorio abre la URL de Google Maps que ya usa el cupón de la billetera, en otra pestaña. [repo: rulett-app/src/lib/wallet.ts]
 - Sin coordenadas válidas no se muestra el botón. No se agregan teléfono, correo ni otras sedes.
 
-Publicar: control en la edición de la landing. Deshabilitado si esa sede no tiene GPS. No exige GPS de las otras sedes (a diferencia de la campaña QR). [repo: rulett-app/src/components/admin/QrDiscoveryPublishForm.tsx]
+Ficha de página. Hoy la línea «Sede · …» solo se pinta en la ruleta, así que la página queda con un hueco para igualar la altura. [repo: rulett-app/src/components/public/DiscoveryBoard.tsx] [humano, 2026-10-01]
+
+- La ficha `PAGE` no muestra «Sede · {nombre}»: `name` ya es el nombre de esa sede. [repo: rulett-app/src/actions/discovery.ts] La ruleta sí la muestra. En `/descubre` y en la billetera, el hueco de la página es la línea del menú.
+- Debajo, una sola línea más, solo en la página:
+  - Si esa sede tiene al menos un producto de menú con oferta: «Tiene 1 oferta en el menú» o «Tiene {n} ofertas en el menú». El enlace abre el menú público de esa sede (`/l/{comercio}/{sede}/menu`).
+  - Si no hay ofertas y sí hay productos activos de esa sede: «Menú digital de esta sede», al mismo menú.
+  - Si no hay productos activos de esa sede: no hay segunda línea. La sede basta.
+- Oferta = la misma regla que la pestaña «Ofertas»: producto activo, categoría activa, asociado a esa sede, y `resolveProductDisplayPrice(...).hasDiscount`. No se cuenta con SQL. [repo: rulett-app/src/lib/product-pricing.ts] [repo: rulett-app/src/lib/digital-menu-offers.ts]
+- El conteo viaja en el ítem de Descubre. Una consulta agrupada por las sedes del resultado, no una carga del menú por ficha.
+- La ruleta no muestra esa línea de menú. Sus botones no cambian.
+
+Cupones del alta. `persistBootstrapAiCoupons` crea hasta 3 cupones inactivos y no les pone sede: `createMany` no escribe la relación `Coupon.branches`. [repo: rulett-app/src/lib/tenant-bootstrap-ai.ts] [repo: rulett-app/prisma/schema.prisma] Lo llaman el alta de super admin y el alta de 14 días, después de crear la sede. [repo: rulett-app/src/actions/superadmin/tenant.ts] [repo: rulett-app/src/actions/self-signup.ts]
+
+- Esos dos llamadas pasan el `branchId` que acaba de devolver `bootstrapTenantRecords`. Cada cupón creado en esa llamada queda conectado a esa sede.
+- Si la IA no crea ninguno, el alta sigue igual: no lanza.
+- El `branchId` sale del alta, nunca del JSON de la IA.
+- `create-ai-coupons` (el botón del panel) no recibe sede y no conecta `Coupon.branches`. [repo: rulett-app/src/actions/create-ai-coupons.ts]
+- No se reescriben cupones ya guardados.
+
+Publicar: la casilla nace marcada y se puede guardar sin GPS. El texto avisa que, sin la ubicación de esa sede, no sale en Descubre. No exige GPS de las otras sedes. [humano, 2026-10-01] [repo: rulett-app/src/components/admin/QrDiscoveryPublishForm.tsx]
 
 Orden nacional: ruletas por jugadas; páginas por `listedInDiscoveryAt` descendente, detrás de las ruletas si el filtro es «todas». [humano, 2026-09-30] [humano, 2026-10-01]
 
@@ -169,7 +191,7 @@ Aplicación web y crons. No hay app nativa: MASVS no aplica.
 
 | Ítem | | Control | Task |
 |---|---|---|---|
-| A01 Control de acceso roto | aplica | El cron exige `CRON_SECRET`. Publicar la página exige la sesión de administrador del comercio que ya guarda la landing. Descubre no devuelve teléfono, correo ni pagos. La coordenada de la sede publicada es la ubicación del local, no un dato de jugador. | T-05, T-09, T-10, T-12 |
+| A01 Control de acceso roto | aplica | El cron exige `CRON_SECRET`. Publicar la página exige la sesión de administrador del comercio que ya guarda la landing. La sede del cupón de alta es la que acaba de crear ese alta, no un id que mande la IA. Descubre no devuelve teléfono, correo ni pagos. La coordenada de la sede publicada es la ubicación del local, no un dato de jugador. | T-05, T-09, T-10, T-12, T-13, T-14 |
 | A02 Fallos criptográficos | no aplica | No hay secreto nuevo. El teléfono de contacto ya se guardaba. | |
 | A03 Inyección | aplica | Consultas por Prisma. El SMS es plantilla fija más el nombre recortado; el nombre no se concatena a SQL. | T-07 |
 | A04 Diseño inseguro | aplica | Olvidar `origin: TENANT` en el cupo haría que el aviso consuma el cupo del comercio. Test de regresión del conteo. | T-02 |
@@ -191,7 +213,11 @@ API Security: el cron es el único extremo nuevo. API2 (autenticación rota) que
 | Cuatro plantillas del worker | mensajes a clientes | No se tocan sus ramas en `buildTemplateComponents`. |
 | `DiscoveryCampaign` | `/descubre`, billetera | Se amplía el tipo en el mismo repo. No hay API pública externa conocida. |
 | Juego | quien escanea el QR | Cambia textos y encuadre a propósito. No cambia el giro ni el reclamo. |
-| Landing | `/l/{comercio}/{sede}` | `listedInDiscovery` default false. Las páginas actuales no aparecen en Descubre solas. |
+| Landing | `/l/{comercio}/{sede}` | v9: `listedInDiscovery` default true, también las páginas ya creadas. Sin GPS de esa sede no salen en Descubre. Apagar la casilla las saca. |
+| Cupón del alta | relación `Coupon.branches` | Solo los cupones creados en el alta de super admin o de 14 días quedan en la sede de ese alta. El botón de IA del panel y los cupones viejos no cambian. |
+| Ficha de Descubre | `/descubre`, billetera | La página gana la línea de sede y, si aplica, la del menú. La ruleta sigue igual. |
+| Casilla de Descubre | `/admin/landings/{id}` | v11: mismo texto, mismo `name="listedInDiscovery"`, mismo aviso de GPS. Se añade `aria-label` en el `<label>` porque Sonar no lee el texto que está a dos `<span>` de profundidad. [repo: src/components/admin/BranchLandingDiscoveryForm.tsx] |
+| Relleno `20261001230527` | landings ya creadas | v11: el `UPDATE` gana un `WHERE` equivalente. No hay migración nueva. El archivo ya se aplicó en Docker; lab y producción no. Solo se corrige el checksum en Docker. No se ejecuta contra Neon. |
 
 Rollback: apagar `SUBSCRIPTION_REMINDERS_ENABLED`, borrar filas `PLATFORM` y `SubscriptionReminder`, dejar las columnas (expand sin contract). Revertir la migración con filas `PLATFORM` todavía presentes fallaría por el null de `qrCampaignId`. No se revierten columnas en caliente.
 

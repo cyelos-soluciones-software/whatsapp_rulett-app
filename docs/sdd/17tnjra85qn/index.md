@@ -1,8 +1,8 @@
-SDD: 17tnjra85qn · v8 · 2026-10-01
+SDD: 17tnjra85qn · v11 · 2026-10-01
 
 # Índice — 17tnjra85qn
 
-estado: aprobado [humano, 2026-10-01]. La v6 se revisó contra el repo y se lanza así.
+estado: v11 pendiente de tu ok. T-01 a T-15 y W-00 a W-03 siguen hechas. T-16 y T-17 cierran dos smells de SonarCloud sin cambiar el comportamiento. Fuera del código: las migraciones en lab y producción, W-04 en Render, el flag apagado, y `engines.node` del worker todavía en `>=20.0.0` hasta el merge.
 
 ClickUp: [Recordar el pago de la suscripción, caber el juego en una pantalla y filtrar lo que hay cerca](https://app.clickup.com/t/9013064238/17tnjra85qn)
 
@@ -16,7 +16,7 @@ ClickUp no se pudo leer desde esta sesión (subtareas, comentarios, relaciones).
 
 | Repo | Qué hace | Tasks |
 |---|---|---|
-| rulett-app | Esquema, aviso, SMS, juego, Descubre | T-01 … T-12 |
+| rulett-app | Esquema, aviso, SMS, juego, Descubre, dos smells de SonarCloud | T-01 … T-17 |
 | whatsapp_rulett-app | Pruebas, mapeo, campaña nula, docs y prueba en Render | W-00 … W-04 |
 
 ## Orden de despliegue
@@ -31,7 +31,20 @@ Juego (T-08) y Descubre (T-09 … T-11) no esperan al worker. Pueden ir en el mi
 
 ## Versión
 
-v8. En la ficha de página de Descubre y en el menú público de esa sede, un botón «Cómo llegar» abre la app de mapas del celular hacia las coordenadas de la sede. No reemplaza «Ver página». Las ruletas no lo llevan. Task T-12, todavía sin implementar. [humano, 2026-10-01]
+v11. Dos smells de SonarCloud, solo en rulett-app. El worker no cambia. [humano, 2026-10-01]
+
+- T-16. La casilla de Descubre gana `aria-label` con el mismo texto visible. El `name`, el marcado y el aviso de GPS no cambian.
+- T-17. El `UPDATE` de `20261001230527_discovery_listed_default_true` lleva un `WHERE` que escribe las mismas filas. No es otra migración. Lab y producción todavía no la tienen. En Docker local solo se actualiza el checksum de Prisma, sin volver a ejecutar el relleno contra Neon.
+
+v10. La ficha de página no repite «Sede · {nombre}»: el título ya es la sede. El hueco lo llena la línea del menú. La oferta se cuenta con `resolveProductDisplayPrice`, en código. T-13, T-14 y T-15 están en el árbol local, sin commit. La migración `20261001230527_discovery_listed_default_true` solo está en Docker. [humano, 2026-10-01] [implementador, 2026-10-01]
+
+v9. Tres ajustes, solo en rulett-app (T-13, T-14, T-15). El worker no cambia. [humano, 2026-10-01]
+
+- La casilla «Publicar esta página en Descubre» nace marcada, también en las páginas que ya existen y en el alta de 14 días y de super admin. El comercio la apaga si no la quiere. Sin GPS de esa sede la página sigue fuera del listado.
+- Los cupones que el alta logra crear quedan ligados a la sede creada en ese mismo alta. El botón de cupones con IA del panel no les pone sede.
+- La ficha de página muestra la sede, como la ruleta. Si el menú de esa sede tiene ofertas, dice cuántas. Si hay menú y ninguna oferta, invita al menú. Si no hay productos, solo la sede.
+
+v8. En la ficha de página de Descubre y en el menú público de esa sede, un botón «Cómo llegar» abre la app de mapas del celular hacia las coordenadas de la sede. No reemplaza «Ver página». Las ruletas no lo llevan. Task T-12. [humano, 2026-10-01]
 
 v7. T-01 a T-11 están implementadas en local, sin commit. La migración `20261001114819_subscription_reminders_discovery` quedó solo en Docker. El flag sigue apagado. Desviaciones aceptadas en `decisions.md`. [implementador, 2026-10-01]
 
