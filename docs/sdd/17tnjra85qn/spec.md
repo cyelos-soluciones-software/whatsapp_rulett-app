@@ -1,4 +1,4 @@
-SDD: 17tnjra85qn · v8 · 2026-10-01
+SDD: 17tnjra85qn · v11 · 2026-10-01
 
 # Spec
 
@@ -60,7 +60,17 @@ R-24. Comercio con `categoryId` null: visible en todas, oculto al elegir una cat
 
 R-25. Landing activa con GPS pero `listedInDiscovery = false`: no sale.
 
-R-26. Publicar sin GPS de esa sede no guarda el flag y el administrador ve que falta la ubicación.
+R-26. Landing con `listedInDiscovery = true` y sede sin latitud o sin longitud: no sale. La casilla puede quedar marcada y el guardado no la apaga. El administrador ve que, sin esa ubicación, no aparece en el listado. [humano, 2026-10-01]
+
+R-31. Toda landing nace con la casilla marcada: alta de super admin, alta de 14 días y alta posterior de una landing en el admin. Las que ya existen quedan marcadas. El comercio puede apagarla. Al apagarla, `listedInDiscoveryAt` vuelve a null. [humano, 2026-10-01]
+
+R-32. Los cupones que el alta de super admin o el alta de 14 días logra crear quedan asociados a la sede creada en ese alta. Si no se crea ninguno, el alta igual termina. El botón de cupones con IA del panel no asocia sede. Los cupones ya guardados no se reasignan. [humano, 2026-10-01]
+
+R-33. La ficha `PAGE` no repite «Sede · {nombre}». Su título ya es el nombre de esa sede y arriba va el nombre del comercio. [repo: rulett-app/src/actions/discovery.ts] La ruleta sigue mostrando «Sede · {nombre}» porque su título es la campaña. El hueco de la página lo ocupa la línea del menú de R-34 y R-35. Si no hay productos activos, no hay línea extra. [humano, 2026-10-01]
+
+R-34. Si el menú de esa sede tiene 1 producto con oferta, la ficha dice «Tiene 1 oferta en el menú». Si tiene más, «Tiene {n} ofertas en el menú». El enlace abre `/l/{comercio}/{sede}/menu`. Oferta es la de la pestaña «Ofertas»: producto activo, categoría activa, de esa sede, y `resolveProductDisplayPrice` con `hasDiscount`. Un descuento que esa función no cuenta, no suma. El conteo es en código, no en SQL. [humano, 2026-10-01] [repo: rulett-app/src/lib/product-pricing.ts]
+
+R-35. Si esa sede no tiene ofertas y sí tiene productos activos, la ficha dice «Menú digital de esta sede» y abre el mismo menú. Si no tiene productos activos, no hay segunda línea. [humano, 2026-10-01]
 
 R-27. `isSubscriptionBillingExpired` verdadero: ni ruleta ni página de ese comercio.
 
@@ -77,6 +87,22 @@ R-30. Una ficha `PAGE` con coordenadas de sede muestra «Cómo llegar» junto a 
 - Worker desplegado sin W-01: la fila falla en el worker, sin llamar a Meta, con `errorLog` `templateParams vacío: no se puede enviar plantilla con variables`. El reconciliador manda SMS. No es un `132000`.
 - Worker con W-01 y plantilla Meta distinta (posicional o con header): ahí sí Meta responde `132000` y también sale el SMS.
 - Legacy sin `TenantSubscription`: sin aviso; en Descubre no se considera vencido.
+
+## SonarCloud v11
+
+R-36. En `/admin/landings/{id}` la casilla sigue diciendo «Publicar esta página en Descubre» y el texto de los 15 km, que sigue siendo un `<span>` dentro del `<label>`. Los ids salen de `useId()`. El `<label>` lleva `aria-label` con ese mismo título y `htmlFor` apuntando al `id` del checkbox. Ese span lleva `id` y el input lo referencia con `aria-describedby`. El aviso ámbar de GPS no entra ahí. `name` sigue siendo `listedInDiscovery`. [repo: src/app/admin/landings/[id]/page.tsx]
+
+R-31, ajuste v11. El relleno de páginas ya creadas queda así, en el mismo archivo `prisma/migrations/20261001230527_discovery_listed_default_true/migration.sql`:
+
+```sql
+UPDATE "BranchLanding"
+SET "listedInDiscovery" = true,
+    "listedInDiscoveryAt" = COALESCE("listedInDiscoveryAt", "createdAt")
+WHERE "listedInDiscovery" = false
+   OR "listedInDiscoveryAt" IS NULL;
+```
+
+Una fila ya publicada y con instante no cambia: el `UPDATE` anterior la reescribía con los mismos valores y este la salta. Una fila apagada, o con instante nulo, recibe los mismos valores que el `UPDATE` sin `WHERE`. No se crea otra migración. `sonar.exclusions` no se toca: el proyecto ya rechazó tapar el gate con exclusiones. [repo: sonar-project.properties] [repo: openspec/changes/completed/050-tema-visual/decisions.md]
 
 ## Matriz
 
@@ -99,8 +125,12 @@ R-30. Una ficha `PAGE` con coordenadas de sede muestra «Cómo llegar» junto a 
 | Comercio desactivado | R-03 | T-04 | unit |
 | Bienvenida, intereses, ruleta, premio | R-17 … R-20 | T-08 | unit de textos + revisión 390×844 |
 | Cerca, filtros, categoría, sin categoría | R-21 … R-24 | T-10, T-11 | unit de la consulta |
-| Página no publicada / sin GPS | R-25, R-26 | T-09 | unit de la acción |
+| Página no publicada / sin GPS | R-25, R-26, R-31 | T-13 | unit de la acción y del relleno |
+| Cupón del alta en la sede | R-32 | T-14 | unit del alta; el botón de IA no conecta sede |
+| Sede y ofertas en la ficha de página | R-33, R-34, R-35 | T-15 | unit del conteo y de la línea |
 | Suscripción vencida fuera de Descubre | R-27 | T-10 | unit |
 | Sin GPS del usuario | R-28 | T-10 | unit |
 | Billetera igual que la página | R-29 | T-11 | la misma función; smoke de props |
 | Cómo llegar abre el mapa de la sede | R-30 | T-12 | unit del enlace; revisión en el celular |
+| Casilla con nombre accesible | R-36 | T-16 | el texto visible no cambia; el label declara `aria-label` |
+| Relleno con `WHERE` equivalente | R-31 | T-17 | el SQL escribe las mismas filas; checksum solo en Docker |

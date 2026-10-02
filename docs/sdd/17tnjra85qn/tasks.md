@@ -1,6 +1,8 @@
-SDD: 17tnjra85qn · v8 · 2026-10-01
+SDD: 17tnjra85qn · v11 · 2026-10-01
 
 # Tasks — whatsapp_rulett-app
+
+Cierre: v11 no agrega tasks aquí. T-16 y T-17 son de rulett-app y ya están en su árbol. W-00 a W-03 hechas. W-04 no es código: la hace el humano en Render.
 
 Dependencias externas:
 
