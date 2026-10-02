@@ -1,12 +1,7 @@
-# docs/sdd — whatsapp_rulett-app
+# docs/sdd
 
-estado: borrador — pendiente de validación humana
-Actualizado: 2026-09-30
+Esta carpeta no es la memoria del proyecto. [humano, 2026-10-01]
 
-Contrato por historia para el worker de WhatsApp. El estado actual sigue en `openspec/specs/` y `docs/`. [repo: AGENTS.md] [repo: docs/README.md]
+El canon es `openspec/`. La historia en curso está en `openspec/changes/active/051-recordatorio-juego-descubre/`. El estado del worker está en `openspec/specs/`.
 
-## Flujo
-
-Igual que en rulett-app: `docs/sdd/<ID-HU>/` con los mismos `proposal.md`, `design.md` y `spec.md` en todos los repos de la historia, y un `tasks.md` solo con las tasks de este repo.
-
-`_base/` se actualiza solo si cambia el contrato de envío o el límite del worker.
+No se vuelve a escribir un SDD aquí.

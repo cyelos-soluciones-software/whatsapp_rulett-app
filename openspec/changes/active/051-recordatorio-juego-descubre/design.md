@@ -104,7 +104,7 @@ Elegible si, a las 08:00:
 - la fecha calendario de `expiresAt` es hoy (kind `DUE_DAY`) o hoy más 7 (kind `SEVEN_DAYS`)
 - no hay `PaymentReceipt` de ese comercio en `PENDING` con canal `MANUAL`. Un `PENDING` de Wompi no impide el aviso. [humano, 2026-10-01]
 
-Sin teléfono de contacto no se encola WhatsApp ni SMS: se crea `SubscriptionReminder` en `NOT_DELIVERED` y la unique key impide el reintento. [repo: rulett-app/docs/sdd/17tnjra85qn/spec.md] Si no es elegible por otra causa, no se crea fila. Si el día ya pasó, no se recupera: el selector solo mira el calendario de esta mañana.
+Sin teléfono de contacto no se encola WhatsApp ni SMS: se crea `SubscriptionReminder` en `NOT_DELIVERED` y la unique key impide el reintento. [repo: openspec/changes/active/051-recordatorio-juego-descubre/specs.md] Si no es elegible por otra causa, no se crea fila. Si el día ya pasó, no se recupera: el selector solo mira el calendario de esta mañana.
 
 El cron diario dispara el worker solo si encoló al menos un WhatsApp. La reconciliación corre igual. Lo que ya quedó `PENDING` lo sigue drenando el cron de WhatsApp. [repo: rulett-app/src/lib/billing/subscription-reminder-queue.ts]
 

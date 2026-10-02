@@ -2,7 +2,7 @@
 SDD: 17tnjra85qn · v8 · Generado: 2026-10-01
 Ambiente: localhost — `http://localhost:3000` (rulett-app). Lo confirmó el analista. No es laboratorio remoto ni producción. Prohibido llamar Neon de lab/PDN, Render o encender el flag fuera de este `.env` local.
 
-ClickUp no se leyó en esta sesión. Los criterios salen de `docs/sdd/17tnjra85qn/spec.md`. No hay `docs/sdd/_base/regression.md`.
+ClickUp no se leyó en esta sesión. Los criterios salen de `specs.md`. La regresión corta de esta historia está en `regression.md`.
 
 T-12 no está implementada. R-30 se ejecuta para dejar constancia; si falta el botón, el caso queda no probado por tarea pendiente, no como defecto de T-11.
 
@@ -208,3 +208,63 @@ Resultado esperado: no verificable en esta corrida de localhost sin un envío re
 | R-30 | CP-07 |
 | Billetera cupones | CP-08 |
 | Plantillas de cliente | CP-15 |
+
+## Corrida laboratorio — 2026-10-01
+
+Ambiente confirmado por el analista: `https://lab.rulett.app`. No es producción. No se llama el cron con el secreto real. No se gira la ruleta. No se crea una cuenta.
+
+Los resultados esperados de CP-04 y CP-10 son los de la v8. En la v11 la casilla puede quedar marcada sin GPS y el relleno publica las páginas ya creadas. Esos dos casos no se juzgan con el texto viejo. El analista ya aprobó la sede sin GPS (R-26). Esta corrida no la repite. El 2026-10-01 cierra el laboratorio con lo ejecutado. El envío al teléfono queda fuera.
+
+### CL-01 · Filtros cerca
+Criterio: R-21, R-22, R-28
+Tipo: positivo
+Canal: backoffice
+Ejecuta: navegador asistido
+Datos: `https://lab.rulett.app/descubre`, sin sesión.
+Pasos: abrir Descubre, esperar el GPS del navegador, pulsar Páginas, Ruletas y Todas.
+Resultado esperado: con GPS, fichas de los dos tipos y no más de 12. Páginas no muestra ruletas. Ruletas no muestra páginas. Sin GPS, listado nacional.
+
+### CL-02 · Categoría
+Criterio: R-23, R-24
+Tipo: positivo
+Canal: backoffice
+Ejecuta: navegador asistido
+Datos: el mismo listado cercano.
+Pasos: en Todas, elegir Farmacias y después una categoría que no corresponda a esas fichas.
+Resultado esperado: Farmacias deja solo comercios de esa categoría. La otra categoría no los mezcla.
+
+### CL-03 · Ficha de página y menú
+Criterio: R-30, R-33, R-34, R-35
+Tipo: positivo
+Canal: backoffice
+Ejecuta: navegador asistido
+Datos: la página que salga en Páginas y su menú.
+Pasos: leer el título, la línea del menú y «Cómo llegar». Abrir el menú. Mirar una ruleta.
+Resultado esperado: el título de la página es la sede, sin repetir «Sede ·». La línea de ofertas abre el menú. «Cómo llegar» está en la ficha y en el menú, no en la ruleta. En escritorio abre Google Maps.
+
+### CL-04 · Alta pública, código de país
+Criterio: R-09
+Tipo: positivo
+Canal: backoffice
+Ejecuta: navegador asistido
+Datos: `https://lab.rulett.app/registro`. No se envía el formulario.
+Pasos: abrir el alta y leer el celular de contacto.
+Resultado esperado: el país queda en +57 y el celular es obligatorio. No se crea la cuenta.
+
+### CL-05 · Cron sin secreto
+Criterio: R-15
+Tipo: seguridad
+Canal: API
+Ejecuta: Claude
+Datos: ninguna credencial real.
+Pasos: `GET /api/cron/subscription-reminders` sin secreto y con un bearer que no es el secreto.
+Resultado esperado: 401. No se llama con el secreto de laboratorio.
+
+### CL-06 · Paso 1 del juego
+Criterio: R-17
+Tipo: positivo
+Canal: backoffice
+Ejecuta: navegador asistido
+Datos: una ruleta pública ya listada. Viewport 390×844. No se gira.
+Pasos: abrir el juego y medir el scroll del paso 1.
+Resultado esperado: título, línea de gratis y sin scroll del documento. Los pasos 2 a 4 quedan fuera si no se gira.
