@@ -2,6 +2,10 @@ SDD: 17tnjra85qn · v11 · 2026-10-01
 
 # Decisiones — reconciliación rulett-app
 
+Cierre v11. El contrato describe el árbol local. T-16 y T-17 están hechas: el formulario tiene `aria-label`, `useId` y `aria-describedby` en el texto de 15 km, y el `UPDATE` de `20261001230527` lleva el `WHERE` de R-31. Oscar confirmó que lab y producción no tenían esa migración al editarla. El quality gate de SonarCloud pasó: 1 issue nuevo, 0 aceptados, 0 hotspots, 0,0 % de cobertura en código nuevo y 0,0 % de duplicación. La captura no nombra el issue que queda, y el gate igual está en verde. [humano, 2026-10-01] [repo: src/components/admin/BranchLandingDiscoveryForm.tsx] [repo: prisma/migrations/20261001230527_discovery_listed_default_true/migration.sql]
+
+Fuera del cierre: Oscar aplica `20261001114819_subscription_reminders_discovery` y después `20261001230527_discovery_listed_default_true` en lab y producción; W-04 redespliega el worker y anota Node y `/health`; el flag sigue apagado; antes del merge el worker pasa a `engines.node` `>=22.5.0`.
+
 v11, plan de T-16 y T-17 aceptado con condiciones. [humano, 2026-10-01] [repo: vitest.config.ts]
 
 T-16. `useId()` para el checkbox y para el texto de ayuda. El texto de 15 km sigue siendo un `<span>` dentro del `<label>`; no pasa a `<p>` ni sale del label. `aria-label` sustituye el nombre accesible; ese span queda solo como `aria-describedby`, no como segunda copia del título. El aviso ámbar de GPS no entra en `aria-describedby`. La prueba es `src/components/admin/__tests__/branch-landing-discovery-form.test.ts` (`renderToStaticMarkup`). Vitest incluye `src/**/*.test.ts`, no hace falta meterla en `src/lib`. [repo: vitest.config.ts]

@@ -2,7 +2,7 @@ SDD: 17tnjra85qn · v11 · 2026-10-01
 
 # Índice — 17tnjra85qn
 
-estado: v11 pendiente de tu ok. T-01 a T-15 y W-00 a W-03 siguen hechas. T-16 y T-17 cierran dos smells de SonarCloud sin cambiar el comportamiento. Fuera del código: las migraciones en lab y producción, W-04 en Render, el flag apagado, y `engines.node` del worker todavía en `>=20.0.0` hasta el merge.
+estado: cerrado [humano, 2026-10-01]. Código v11 reconciliado en local. T-01 a T-17 y W-00 a W-03 están hechas. SonarCloud: quality gate en verde, con 1 issue nuevo que no tumba el gate. Fuera de este cierre: las dos migraciones en lab y producción, W-04 en Render, el flag apagado, y `engines.node` del worker todavía en `>=20.0.0` hasta el merge.
 
 ClickUp: [Recordar el pago de la suscripción, caber el juego en una pantalla y filtrar lo que hay cerca](https://app.clickup.com/t/9013064238/17tnjra85qn)
 
@@ -31,10 +31,10 @@ Juego (T-08) y Descubre (T-09 … T-11) no esperan al worker. Pueden ir en el mi
 
 ## Versión
 
-v11. Dos smells de SonarCloud, solo en rulett-app. El worker no cambia. [humano, 2026-10-01]
+v11. Dos smells de SonarCloud, solo en rulett-app. El worker no cambia. T-16 y T-17 están en el árbol local. [humano, 2026-10-01] [implementador, 2026-10-01]
 
 - T-16. La casilla de Descubre gana `aria-label` con el mismo texto visible. El `name`, el marcado y el aviso de GPS no cambian.
-- T-17. El `UPDATE` de `20261001230527_discovery_listed_default_true` lleva un `WHERE` que escribe las mismas filas. No es otra migración. Lab y producción todavía no la tienen. En Docker local solo se actualiza el checksum de Prisma, sin volver a ejecutar el relleno contra Neon.
+- T-17. El `UPDATE` de `20261001230527_discovery_listed_default_true` lleva un `WHERE` que escribe las mismas filas. No es otra migración. Lab y producción no la tenían al editarla. En Docker local se actualizó el checksum, sin volver a ejecutar el relleno y sin tocar Neon.
 
 v10. La ficha de página no repite «Sede · {nombre}»: el título ya es la sede. El hueco lo llena la línea del menú. La oferta se cuenta con `resolveProductDisplayPrice`, en código. T-13, T-14 y T-15 están en el árbol local, sin commit. La migración `20261001230527_discovery_listed_default_true` solo está en Docker. [humano, 2026-10-01] [implementador, 2026-10-01]
 
