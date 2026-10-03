@@ -2,7 +2,9 @@ SDD: 17tnjra85qn · v11 · 2026-10-01
 
 # Índice — 17tnjra85qn
 
-estado: cerrado [humano, 2026-10-01]. Código v11 reconciliado en local. T-01 a T-17 y W-00 a W-03 están hechas. SonarCloud: quality gate en verde, con 1 issue nuevo que no tumba el gate. Fuera de este cierre: las dos migraciones en lab y producción, W-04 en Render, el flag apagado, y `engines.node` del worker todavía en `>=20.0.0` hasta el merge.
+Ubicación: `openspec/changes/active/051-recordatorio-juego-descubre/`. [humano, 2026-10-01] Esta es la memoria de la historia. Sigue en `active` porque el delta todavía no se fusionó en `openspec/specs/` y siguen pendientes las migraciones en lab y producción, W-04 y el flag.
+
+estado: cerrado [humano, 2026-10-01]. Código v11 reconciliado en local. T-01 a T-17 y W-00 a W-03 están hechas. SonarCloud: quality gate en verde, con 1 issue nuevo que no tumba el gate. Fuera de este cierre: las dos migraciones en lab y producción, W-04 en Render, el flag apagado, y `engines.node` del worker todavía en `>=20.0.0` hasta el merge. Laboratorio en `lab.rulett.app`: corrida cerrada, veredicto Incompleto. El envío al teléfono queda fuera.
 
 ClickUp: [Recordar el pago de la suscripción, caber el juego en una pantalla y filtrar lo que hay cerca](https://app.clickup.com/t/9013064238/17tnjra85qn)
 

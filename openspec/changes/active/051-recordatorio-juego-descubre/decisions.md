@@ -2,9 +2,15 @@ SDD: 17tnjra85qn · v11 · 2026-10-01
 
 # Decisiones — reconciliación rulett-app
 
+Memoria única. [humano, 2026-10-01] Esta historia vive en `openspec/changes/active/051-recordatorio-juego-descubre/`. `docs/sdd/` y la copia `sdd/` de la raíz del workspace dejan de ser fuente. El precedente es el cambio 050: el canon es `openspec/` y no se duplica `openspec/specs/`.
+
+Cierre de laboratorio. El analista cierra la corrida en `lab.rulett.app` el 2026-10-01 con lo ya visto. Veredicto Incompleto. El envío al teléfono (R-01 a R-14, R-16, R-32) queda fuera y no se marca como cumple. [humano, 2026-10-01]
+
 Cierre v11. El contrato describe el árbol local. T-16 y T-17 están hechas: el formulario tiene `aria-label`, `useId` y `aria-describedby` en el texto de 15 km, y el `UPDATE` de `20261001230527` lleva el `WHERE` de R-31. Oscar confirmó que lab y producción no tenían esa migración al editarla. El quality gate de SonarCloud pasó: 1 issue nuevo, 0 aceptados, 0 hotspots, 0,0 % de cobertura en código nuevo y 0,0 % de duplicación. La captura no nombra el issue que queda, y el gate igual está en verde. [humano, 2026-10-01] [repo: src/components/admin/BranchLandingDiscoveryForm.tsx] [repo: prisma/migrations/20261001230527_discovery_listed_default_true/migration.sql]
 
 Fuera del cierre: Oscar aplica `20261001114819_subscription_reminders_discovery` y después `20261001230527_discovery_listed_default_true` en lab y producción; W-04 redespliega el worker y anota Node y `/health`; el flag sigue apagado; antes del merge el worker pasa a `engines.node` `>=22.5.0`.
+
+T-16 y T-17 están en el árbol local, sin commit. 1.400 tests y `next build` en verde. Paso 0 de T-17: Oscar confirmó que ni lab ni producción tienen `20261001230527`. En Docker el checksum previo coincidía con el SHA-256 de los bytes del archivo en `HEAD`; se reemplazó por el del archivo nuevo, en minúsculas, sin reejecutar el relleno. `migrate status` contra `localhost:5440` al día. Los avisos de SonarCloud se confirman tras el push. [implementador, 2026-10-01]
 
 v11, plan de T-16 y T-17 aceptado con condiciones. [humano, 2026-10-01] [repo: vitest.config.ts]
 
@@ -32,7 +38,7 @@ T-01 a T-11 están en el árbol de trabajo, sin commit. Migración local `202610
 
 ## Aceptadas
 
-- Teléfono de contacto vacío: se crea `NOT_DELIVERED` y no se reintenta. Es el borde del spec. `design.md` decía que sin teléfono no había fila; v7 lo corrige. [repo: rulett-app/docs/sdd/17tnjra85qn/spec.md] [repo: rulett-app/src/lib/billing/subscription-reminder-queue.ts]
+- Teléfono de contacto vacío: se crea `NOT_DELIVERED` y no se reintenta. Es el borde del spec. `design.md` decía que sin teléfono no había fila; v7 lo corrige. [repo: openspec/changes/active/051-recordatorio-juego-descubre/specs.md] [repo: rulett-app/src/lib/billing/subscription-reminder-queue.ts]
 - El cron diario dispara el worker solo si encoló al menos un WhatsApp. La reconciliación corre igual, y el cron de WhatsApp sigue drenando la cola. [repo: rulett-app/src/lib/billing/subscription-reminder-queue.ts] [repo: rulett-app/src/app/api/cron/send-whatsapp/route.ts]
 - `GameFlow` sigue recibiendo `campaignName` aunque el componente ya no la usa, para no cambiar a quien la llama. [repo: rulett-app/src/components/GameFlow.tsx]
 - `.env.example` queda fuera de git porque `.gitignore` tiene `.env*`. La variable está en `docs/ENV.md`, que sí se versiona. Para meter el ejemplo hay que agregar `!.env.example` antes del commit. Este rol no edita `.gitignore`. [repo: rulett-app/.gitignore] [repo: rulett-app/docs/ENV.md]
