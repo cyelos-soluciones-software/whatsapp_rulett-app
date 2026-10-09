@@ -8,7 +8,6 @@ import type { WhatsappQueueRow } from '../src/types.js';
 const config: Config = {
   databaseUrl: 'postgresql://localhost/test',
   databaseSsl: false,
-  pollIntervalMs: 60_000,
   batchSize: 50,
   httpPort: 8080,
   workerApiKey: 'test-key',
