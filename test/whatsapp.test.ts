@@ -11,7 +11,6 @@ const config: Config = {
   batchSize: 50,
   httpPort: 8080,
   workerApiKey: 'test-key',
-  edgeSharedSecret: 'test-edge',
   whatsappToken: 'test-token',
   whatsappPhoneId: '123456',
   whatsappAccountId: 'acc-1',

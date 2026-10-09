@@ -64,11 +64,11 @@ La ficha lista los avisos del comercio, automáticos y forzados, del más nuevo 
 
 ### R-14 · Disparo
 
-Con ambos secretos, el worker reclama un lote, lo envía y después responde 200. Sin sondeo cada 60 s en ese proceso.
+Con el Bearer correcto, el worker reclama un lote, lo envía y después responde 200. Sin sondeo cada 60 s en ese proceso. Cloud Run, con autenticación requerida, no deja llegar la petición si falta el token de identidad.
 
 ### R-15 · Rechazos
 
-Sin Bearer, sin header de borde, o con cualquiera de los dos mal: 401, la cola no cambia. Sin `EDGE_SHARED_SECRET` en el proceso: 503, la cola no cambia.
+Sin Bearer, con Bearer mal o sin el esquema `Bearer`: 401, la cola no cambia. Sin token de identidad, Google responde 403 y la cola no cambia. El proceso ya no tiene secreto de borde.
 
 ### R-16 · Mañana siguiente
 
@@ -84,7 +84,7 @@ Una fila `PROCESSING` más de 15 minutos vuelve a `PENDING` y entra en el siguie
 
 ### R-19 · Health
 
-`GET /health` responde 200 sin secretos, en `run.app` y en `worker.rulett.app`.
+`GET /health`, si la petición entra al proceso, responde 200 sin secretos de aplicación. En público, con IAM activo, Google responde 403 antes.
 
 ## Errores y concurrencia
 
@@ -114,7 +114,7 @@ Una fila `PROCESSING` más de 15 minutos vuelve a `PENDING` y entra en el siguie
 | No tapa el automático | R-12 | T-04, T-05 | Test de integración del único parcial, o test del SQL contra la base de Docker |
 | Historial | R-13 | T-06 | Test del query |
 | Campaña y aviso de las 08:00 en Cloud Run | R-14, R-16 | W-01, W-04, T-07 | Prueba manual del corte |
-| Rechazo sin header y sin clave | R-15 | W-01, W-02 | Test del server |
+| Rechazo sin clave | R-15 | W-05, T-07 | Test del server y del trigger |
 | Sin duplicar en la convivencia | R-17 | W-04 | Prueba manual con N filas |
 | Mensaje de noche | R-16 | W-01 | No hay sondeo en el binario nuevo; lo cubre el test de que `index` no programa intervalo |
 | Health | R-19 | W-02 | Test |

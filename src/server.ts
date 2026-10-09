@@ -5,17 +5,10 @@ import type { BatchOutcome } from './batch-runner.js';
 
 type TriggerHandler = () => Promise<BatchOutcome>;
 
-const EDGE_SECRET_HEADER = 'x-rulett-edge-secret';
-
 function readBearerToken(req: IncomingMessage): string | null {
   const auth = req.headers.authorization?.trim();
   if (!auth?.startsWith('Bearer ')) return null;
   return auth.slice('Bearer '.length).trim() || null;
-}
-
-function readEdgeSecret(req: IncomingMessage): string | null {
-  const value = req.headers[EDGE_SECRET_HEADER];
-  return typeof value === 'string' && value !== '' ? value : null;
 }
 
 function sha256(value: string): Buffer {
@@ -40,19 +33,10 @@ function logError(message: string): void {
 async function handleTrigger(
   req: IncomingMessage,
   res: ServerResponse,
-  options: { apiKey: string; edgeSecret: string; onTrigger: TriggerHandler },
+  options: { apiKey: string; onTrigger: TriggerHandler },
 ): Promise<void> {
+  // El token de identidad de Google lo valida Cloud Run (IAM) antes de llegar aquí.
   if (!secretsMatch(readBearerToken(req), options.apiKey)) {
-    sendJson(res, 401, { error: 'No autorizado.' });
-    return;
-  }
-
-  if (options.edgeSecret === '') {
-    sendJson(res, 503, { error: 'No configurado.' });
-    return;
-  }
-
-  if (!secretsMatch(readEdgeSecret(req), options.edgeSecret)) {
     sendJson(res, 401, { error: 'No autorizado.' });
     return;
   }
@@ -73,7 +57,6 @@ async function handleTrigger(
 
 export function createTriggerServer(options: {
   apiKey: string;
-  edgeSecret: string;
   onTrigger: TriggerHandler;
 }): http.Server {
   return http.createServer((req, res) => {
@@ -98,7 +81,6 @@ export function createTriggerServer(options: {
 export function startTriggerServer(options: {
   port: number;
   apiKey: string;
-  edgeSecret: string;
   onTrigger: TriggerHandler;
 }): http.Server {
   const server = createTriggerServer(options);

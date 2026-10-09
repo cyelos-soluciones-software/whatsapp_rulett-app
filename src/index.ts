@@ -29,7 +29,6 @@ async function main(): Promise<void> {
     databaseSsl: config.databaseSsl,
     batchSize: config.batchSize,
     httpPort: config.httpPort,
-    edgeSecretConfigured: config.edgeSharedSecret !== '',
   });
 
   const queue = new QueueRepository(config);
@@ -67,11 +66,10 @@ async function main(): Promise<void> {
 
   log('info', 'Conexión a PostgreSQL verificada');
 
-  // Sin sondeo: cada lote lo dispara /api/trigger (cron de rulett-app vía Cloudflare).
+  // Sin sondeo: cada lote lo dispara /api/trigger (cron de rulett-app).
   startTriggerServer({
     port: config.httpPort,
     apiKey: config.workerApiKey,
-    edgeSecret: config.edgeSharedSecret,
     onTrigger: () => runner.run(),
   });
 

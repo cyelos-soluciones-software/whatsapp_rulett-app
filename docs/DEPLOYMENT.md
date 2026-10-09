@@ -61,16 +61,21 @@ NODE_ENV=production
 
 ## Cloud Run
 
-Runbook completo (Artifact Registry, Secret Manager, servicio, Cloudflare, corte y rollback): [`openspec/changes/active/054-gemini-aviso-cloud-run/design.md`](../openspec/changes/active/054-gemini-aviso-cloud-run/design.md), sección «Paso a paso — Cloud Run».
+Runbook completo (Artifact Registry, Secret Manager, servicio, corte a IAM y rollback): [`openspec/changes/active/054-gemini-aviso-cloud-run/design.md`](../openspec/changes/active/054-gemini-aviso-cloud-run/design.md), sección «Paso a paso — Cloud Run».
 
 Este build (rama `cloud-run`) se comporta distinto del que corre en Render:
 
 - **Sin sondeo.** No hay bucle de `POLL_INTERVAL_MS`. Cada lote lo dispara `/api/trigger` (cron de rulett-app cada 15 minutos, 08:00–20:45 Bogotá). Lo encolado de noche sale en el primer disparo de las 08:00.
 - **El disparo responde al terminar el lote:** `{ "triggered": true, "processed": <n> }`; con un lote en curso, `processed: 0` y `busy: true`; si el lote lanza, 500 genérico.
-- **Dos secretos en `GET`/`POST /api/trigger`:** `Authorization: Bearer <WORKER_API_KEY>` y `X-Rulett-Edge-Secret: <EDGE_SHARED_SECRET>` (lo agrega solo el Cloudflare Worker). Bearer incorrecto → 401. Bearer correcto con `EDGE_SHARED_SECRET` vacío en el proceso → 503. Header de borde incorrecto → 401. En ningún caso se procesa la cola. `GET /health` no pide secretos.
+- **Dos capas en `GET`/`POST /api/trigger`:**
+  - **IAM de Cloud Run** («Requerir autenticación»): solo la cuenta de servicio `whatsapp-worker-invoker`, con rol Cloud Run Invoker sobre este servicio, puede llamarlo. rulett-app manda su token de identidad en `X-Serverless-Authorization`. Sin token válido, Google responde 403 y la solicitud no llega al contenedor. El proceso no valida ese token.
+  - **Bearer**, como siempre: `Authorization: Bearer <WORKER_API_KEY>`, comparado en tiempo constante. Ausente, mal o sin esquema `Bearer` → 401 y no se procesa la cola.
+- **Sin secreto de borde.** No hay Cloudflare ni header `X-Rulett-Edge-Secret`. Si `EDGE_SHARED_SECRET` sigue en el entorno, se ignora; se puede borrar cuando la revisión nueva esté sirviendo.
+- **`GET /health`** no pide el Bearer. Con IAM activo, Google también exige el token para llamarlo desde fuera; el probe de arranque de Cloud Run es TCP y no pasa por IAM.
+- **Errores de configuración** nombran la variable (`BATCH_SIZE debe ser un entero positivo.`) y no imprimen el valor recibido, para no filtrar secretos mal asignados a los logs.
 - **Reclaim:** antes de cada lote, las filas `PROCESSING` con `updatedAt` de hace más de 15 minutos vuelven a `PENDING`. Si Meta ya había aceptado el mensaje, se reenvía (riesgo aceptado en el SDD 054).
 
-**Render no debe recibir este build.** Sin `EDGE_SHARED_SECRET` respondería 503 a todos los disparos y, sin sondeo, la cola dejaría de moverse. Render sigue con el código de `main` hasta suspenderlo en el corte.
+**Render no debe recibir este build.** Sin sondeo, la cola solo se movería con los disparos de rulett-app, y el corte a Cloud Run se haría sin la prueba del runbook. Render sigue con el código de `main` hasta suspenderlo en el corte.
 
 ---
 

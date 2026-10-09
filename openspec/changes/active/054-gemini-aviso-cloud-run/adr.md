@@ -42,24 +42,25 @@ Estado: pendiente de aprobación
 
 La migración la aplica el humano en lab y producción. El cron de la mañana sigue siendo idempotente.
 
-# ADR-054-3 — Cloud Run procesa el lote antes de responder, detrás de Cloudflare
+# ADR-054-3 — Cloud Run procesa el lote antes de responder, y solo lo invoca una cuenta de servicio
 
-SDD: 17tnjrabmxn · v2 · 2026-10-08
-Estado: pendiente de aprobación
+SDD: 17tnjrabmxn · v4 · 2026-10-08
+Estado: aprobado [humano, 2026-10-08]
 
 ## Contexto
 
-El worker responde 200 y procesa después. [repo: whatsapp_rulett-app/src/server.ts] Cloud Run casi no ejecuta nada después de responder. Render está en plan gratis y se duerme. [humano, 2026-10-05] rulett-app no debe conocer la URL de `run.app`.
+El worker responde 200 y procesa después. [repo: whatsapp_rulett-app/src/server.ts] Cloud Run casi no ejecuta nada después de responder. Render está en plan gratis y se duerme. [humano, 2026-10-05] La historia pedía Cloudflare y un header que rulett-app no conocería. El servicio ya corre en Cloud Run y el humano cambió la puerta a IAM para no mantener ese proxy. [humano, 2026-10-08]
 
 ## Decisión
 
-El disparo espera al lote y entonces responde. Cloudflare, en `worker.rulett.app`, agrega `X-Rulett-Edge-Secret`. El worker lo exige además del Bearer. `GET /health` no lleva secretos. Mínimo de instancias 0. Este build no se despliega en Render. El runbook está en `design.md`.
+El disparo espera al lote y entonces responde. Cloud Run exige autenticación. La única identidad que puede invocar es `whatsapp-worker-invoker`, sin roles de proyecto, con `roles/run.invoker` solo sobre `whatsapp-rulett-app`. rulett-app manda el token en `X-Serverless-Authorization: Bearer`, con audiencia igual al origen de la URL. El worker sigue exigiendo `WORKER_API_KEY` en `Authorization`. No hay secreto de borde ni Cloudflare. Mínimo de instancias 0. Este build no se despliega en Render.
 
 ## Alternativas
 
+- Header secreto detrás de Cloudflare. Era el diseño anterior. El humano lo descartó.
 - Instancia siempre encendida. Se sale de la capa gratis.
-- Cerrar `run.app` con un balanceador de Google. Unos US$18 al mes. Fuera de alcance.
+- Cerrar `run.app` con un balanceador de Google. Unos US$18 al mes.
 
 ## Consecuencias
 
-Un mensaje encolado de noche sale en el primer disparo de las 08:00. Si Vercel o Cloudflare cortan el request antes de tiempo, la fila puede quedar en `PROCESSING`; a los 15 minutos vuelve a pendiente, con riesgo de doble envío si Meta ya había aceptado.
+rulett-app guarda la URL `run.app` en Vercel. Un mensaje encolado de noche sale en el primer disparo de las 08:00. Si el cliente corta el request, la fila puede quedar en `PROCESSING`; a los 15 minutos vuelve a pendiente, con riesgo de doble envío si Meta ya había aceptado. Hay que desplegar el código que ignora `EDGE_SHARED_SECRET` antes de borrar esa variable.

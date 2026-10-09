@@ -6,8 +6,6 @@ export interface Config {
   batchSize: number;
   httpPort: number;
   workerApiKey: string;
-  /** Vacío = `/api/trigger` responde 503 (fallar cerrado); no se exige al arrancar. */
-  edgeSharedSecret: string;
   whatsappToken: string;
   whatsappPhoneId: string;
   whatsappAccountId: string;
@@ -38,7 +36,7 @@ function parsePositiveInt(name: string, fallback: number): number {
 
   const parsed = Number.parseInt(raw, 10);
   if (!Number.isFinite(parsed) || parsed <= 0) {
-    throw new Error(`${name} debe ser un entero positivo. Valor recibido: ${raw}`);
+    throw new Error(`${name} debe ser un entero positivo.`);
   }
 
   return parsed;
@@ -57,7 +55,7 @@ function parseBoolean(name: string, fallback: boolean): boolean {
     return false;
   }
 
-  throw new Error(`${name} debe ser true o false. Valor recibido: ${raw}`);
+  throw new Error(`${name} debe ser true o false.`);
 }
 
 /**
@@ -104,19 +102,12 @@ export function loadConfig(): Config {
   const databaseUrl = normalizeDatabaseUrl(requireEnv('DATABASE_URL'));
   const databaseSsl = parseBoolean('DATABASE_SSL', inferDatabaseSsl(databaseUrl));
 
-  const httpPortRaw = process.env.PORT?.trim();
-  const httpPort = httpPortRaw ? Number.parseInt(httpPortRaw, 10) : 8080;
-  if (!Number.isFinite(httpPort) || httpPort <= 0) {
-    throw new Error(`PORT debe ser un entero positivo. Valor recibido: ${httpPortRaw}`);
-  }
-
   return {
     databaseUrl,
     databaseSsl,
     batchSize: parsePositiveInt('BATCH_SIZE', 50),
-    httpPort,
+    httpPort: parsePositiveInt('PORT', 8080),
     workerApiKey: requireEnv('WORKER_API_KEY'),
-    edgeSharedSecret: process.env.EDGE_SHARED_SECRET?.trim() ?? '',
     whatsappToken: requireEnv('WHATSAPP_TOKEN'),
     whatsappPhoneId: requireEnv('WHATSAPP_PHONE_ID'),
     whatsappAccountId: requireEnv('WHATSAPP_ACCOUNT_ID'),

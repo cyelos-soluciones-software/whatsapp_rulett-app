@@ -33,6 +33,15 @@ Pruebas: no hay.
 Seguridad: ninguno
 Hotspot a revisar: no
 
+### W-05 · Quitar el secreto de borde
+Repo: whatsapp_rulett-app · Depende de: W-01
+Subtarea ClickUp: `17tnjrabmxv`
+Archivos previstos: `src/server.ts`, `src/config.ts`, `src/index.ts`, `.env.example`, `docs/DEPLOYMENT.md`, `test/server.test.ts`
+Criterio de hecho: `/api/trigger` (GET y POST) solo exige el Bearer, comparado con `timingSafeEqual` sobre SHA-256. No hay `edgeSharedSecret` ni 503 por secreto de borde. Si `EDGE_SHARED_SECRET` está en el entorno, se ignora. Los errores de configuración no incluyen el valor recibido. Lo demás de W-01 sigue: espera el lote, `busy`, 500 genérico, reclaim, sin sondeo. `DEPLOYMENT.md` ya no pide el header de Cloudflare.
+Pruebas: Bearer bien, mal, ausente y sin esquema. El procesador no se llama en los tres fallos. Un error de configuración de entero o booleano no contiene el valor. `npm test` completo.
+Seguridad: API2, API8. No imprimir `DATABASE_URL` ni otros secretos en el mensaje.
+Hotspot a revisar: sí, `secretsMatch`
+
 ### W-04 · Aprovisionar Cloud Run
 Repo: whatsapp_rulett-app · Depende de: W-01, W-02
 Subtarea ClickUp: `17tnjrabmxw`

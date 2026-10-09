@@ -20,8 +20,8 @@ La IA sigue funcionando después del 16/10. El super admin puede comprobar el av
 - Set de referencia (5 comercios y 5 intenciones de SMS) comparado por el analista. No es un arnés automático.
 - Botón en `/super-admin/tenants/[tenantId]/suscripcion` para forzar el aviso de 7 días o el de vencimiento, con historial.
 - Cerrar en producción los pendientes de `17tnjra85qn` que bloquean el WhatsApp (migración, interruptor, plantillas). Lo ejecuta el humano; el SDD le deja las consultas.
-- Worker: el disparo procesa el lote y después responde; exige encabezado de Cloudflare además del Bearer.
-- Cloud Run + Artifact Registry + Secret Manager + Cloudflare Worker en un subdominio de rulett.app. Runbook en `design.md`.
+- Worker: el disparo procesa el lote y después responde; exige el Bearer. Cloud Run exige además un token de identidad de una cuenta de servicio solo para invocar.
+- Cloud Run + Artifact Registry + Secret Manager. Runbook en `design.md`. Sin Cloudflare.
 - Apagar Render después de la prueba. No borrarlo el mismo día.
 
 ## No alcance
@@ -50,7 +50,7 @@ Los de [proyecto: historias/gemini-31-aviso-renovacion-cloud-run/historia.md], s
 - Comparación del set de referencia aprobada por el analista.
 - Forzar aviso de 7 días o de vencimiento, también si ya salió o la suscripción venció. Sin teléfono, no envía. Meta rechaza → SMS. No gasta cupo. Doble pulsación = un envío. No tapa el automático del día.
 - Campaña de un comercio y aviso de las 08:00 salen con el worker en Cloud Run.
-- Llamada directa a `run.app` sin el encabezado no procesa la cola. Llamada por Cloudflare sin la clave tampoco.
+- Una llamada a `run.app` sin el token de identidad no entra al contenedor. Con token y sin la clave del worker, no procesa la cola.
 - Convivencia Render + Cloud Run sin duplicar ni perder los mensajes en cola.
 
 ## Riesgos

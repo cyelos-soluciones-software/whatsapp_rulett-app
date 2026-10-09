@@ -1,4 +1,4 @@
-SDD: 17tnjrabmxn · v3 · 2026-10-08
+SDD: 17tnjrabmxn · v4 · 2026-10-08
 
 # Diseño — 17tnjrabmxn
 
@@ -60,18 +60,22 @@ Se quita el bucle de 60 s **solo en el binario que corre en Cloud Run**. Render 
 
 Descartado: `min-instances=1`. Sale de la capa gratis y el analista pidió esa capa. [humano, 2026-10-05]
 
-### D-04 · Dos secretos, y el de Cloudflare no lo conoce rulett-app
+### D-04 · IAM de Cloud Run, y el Bearer de siempre
 
-| Secreto | Quién lo pone | Quién lo comprueba |
+[humano, 2026-10-08] Se descarta Cloudflare y el header `X-Rulett-Edge-Secret`. El servicio ya corre en Cloud Run y rulett-app sí conoce la URL `run.app`. La puerta de red es IAM: solo una cuenta de servicio nueva puede invocar el servicio. El worker sigue exigiendo `WORKER_API_KEY`.
+
+| Credencial | Quién la pone | Quién la comprueba |
 |---|---|---|
-| `WORKER_API_KEY` | rulett-app, header `Authorization: Bearer` | el worker, como hoy |
-| `EDGE_SHARED_SECRET` | solo el Cloudflare Worker, header `X-Rulett-Edge-Secret` | el worker, solo en `/api/trigger` |
+| Token de identidad de `whatsapp-worker-invoker` | rulett-app, header `X-Serverless-Authorization: Bearer <id_token>` | Cloud Run, antes de llegar al contenedor |
+| `WORKER_API_KEY` | rulett-app, header `Authorization: Bearer` | el worker |
 
-`GET /health` no lleva secretos. Lo usan el probe de Cloud Run y un chequeo manual.
+La cuenta no tiene roles de proyecto. Solo `roles/run.invoker` sobre el servicio `whatsapp-rulett-app`. La audiencia del token es el origen de `WHATSAPP_WORKER_TRIGGER_URL`, sin path y sin barra final. `google-auth-library` ya está en rulett-app. [repo: rulett-app/package.json]
 
-Si `EDGE_SHARED_SECRET` no está definido, `/api/trigger` responde 503 y no procesa. Fallar cerrado. En Cloud Run la variable siempre está. Render no corre este build, así que no le afecta.
+Si la URL es de `run.app` y faltan `WHATSAPP_WORKER_INVOKER_CLIENT_EMAIL` o `WHATSAPP_WORKER_INVOKER_PRIVATE_KEY`, rulett-app no llama al worker. Con la URL de Render no se genera token: el comportamiento de hoy.
 
-Ingress de Cloud Run: público. Cerrarlo a Cloudflare exige un balanceador (~US$18/mes). Fuera de alcance. [proyecto: historia.md]
+El worker ya no lee `EDGE_SHARED_SECRET`. Si la variable sigue en el servicio, se ignora. Un error de configuración no incluye el valor de la variable: `parsePositiveInt` y `parseBoolean` hoy lo imprimen. [repo: whatsapp_rulett-app/src/config.ts]
+
+`GET /health` dentro del proceso no pide secretos. Con «Requerir autenticación», un curl público sin token recibe 403 de Google y no entra al contenedor. No configures un probe HTTP a `/health`: usa TCP al puerto 8080, o ninguno.
 
 ### D-05 · Filas `PROCESSING` viejas vuelven a pendiente
 
@@ -91,25 +95,25 @@ Cloud Run con CPU siempre asignado y respuesta inmediata, sin cambiar el server.
 | `subscription-reminder-queue.ts` | rulett-app | Inserción forzada que no choca con el cron. |
 | Acción super admin | rulett-app | `requireSuperAdminMutation`. [repo: rulett-app/src/actions/superadmin/tenant.ts] |
 | Página de suscripción | rulett-app | Elección, confirmación, historial, aviso sin teléfono. |
-| `server.ts`, `index.ts` | whatsapp_rulett-app | Await del lote, header, reclaim, sin sondeo. |
-| `whatsapp-worker-trigger.ts` | rulett-app | Timeout. No envía el header de borde. |
-| Cloudflare Worker | consola, no repo | Agrega `X-Rulett-Edge-Secret` y reenvía a `run.app`. |
-| Cloud Run | consola | W-04. |
+| `server.ts`, `index.ts` | whatsapp_rulett-app | Await del lote, solo Bearer, reclaim, sin sondeo. |
+| `whatsapp-worker-trigger.ts` | rulett-app | Timeout y token de identidad en `X-Serverless-Authorization` cuando la URL es `run.app`. |
+| Cloud Run | consola | W-04. IAM con `whatsapp-worker-invoker`. |
 
 ## Contratos
 
 ### `POST /api/trigger`
 
-Request: `Authorization: Bearer <WORKER_API_KEY>` y `X-Rulett-Edge-Secret: <EDGE_SHARED_SECRET>`.
+Request que llega al contenedor: `Authorization: Bearer <WORKER_API_KEY>`. Cloud Run, si «Requerir autenticación» está activo, exige antes `X-Serverless-Authorization: Bearer <id_token>` y responde 403 sin entrar al contenedor si falta o no es de `whatsapp-worker-invoker`.
 
 | Caso | HTTP | Body | ¿Procesa? |
 |---|---|---|---|
-| Ambos secretos correctos | 200 | `{ "triggered": true, "processed": <n> }` | sí, antes de responder |
-| Falta o sobra cualquiera | 401 | `{ "error": "No autorizado." }` | no |
-| `EDGE_SHARED_SECRET` vacío en el proceso | 503 | `{ "error": "No configurado." }` | no |
+| IAM válido y Bearer correcto | 200 | `{ "triggered": true, "processed": <n> }` | sí, antes de responder |
+| Bearer ausente, mal o sin esquema `Bearer` | 401 | `{ "error": "No autorizado." }` | no |
+| Excepción del lote | 500 | `{ "error": "Error al procesar." }` | no encadena otro |
 | Ya hay un lote en curso | 200 | `{ "triggered": true, "processed": 0, "busy": true }` | no encadena otro |
+| Sin token de identidad, con IAM activo | 403 de Google | no llega al worker | no |
 
-`GET /health` sigue en 200 `{ "ok": true }` sin secretos.
+`GET` y `POST` en `/api/trigger` usan la misma puerta. `GET /health`, si la petición entra al proceso, responde 200 `{ "ok": true }` sin secretos de aplicación.
 
 ### Acción de forzar
 
@@ -137,15 +141,15 @@ API del worker (API Security Top 10) y la acción web (web Top 10).
 | Ítem | Aplica | Control | Task |
 |---|---|---|---|
 | API1 Broken Object Level Authorization | No aplica al trigger: no recibe id de recurso del llamador. El lote sale de la base. | — | — |
-| API2 Broken Authentication | Aplica | Bearer constante en tiempo (no `!==` corto-circuito sobre el secreto completo: comparar longitudes y luego un OR de bytes) y header de borde igual. 401 genérico. | W-01 |
+| API2 Broken Authentication | Aplica | IAM de Cloud Run más Bearer comparado con `timingSafeEqual` sobre el SHA-256. 401 genérico. El token de Google no lo valida el proceso. | W-05, T-07 |
 | API3 Broken Object Property | No aplica | No hay escritura masiva de propiedades. | — |
 | API4 Unrestricted Resource Consumption | Aplica | `concurrency=1`, `max-instances=2`, timeout 300 s, lote ya topado por `BATCH_SIZE`. | W-04 |
 | API5 Broken Function Level Authorization | Aplica en la acción | `requireSuperAdminMutation`. Un admin de comercio no tiene esa sesión. | T-05 |
 | API6 Unrestricted Access to Sensitive Business Flows | Aplica | Doble pulsación acotada a 2 minutos. El forzado no está en un endpoint público. | T-05 |
 | API7 SSRF | No aplica | El worker no recibe URL del cliente. rulett-app llama una URL de entorno, no del usuario. | — |
-| API8 Security Misconfiguration | Aplica | Secretos en Secret Manager, no en la imagen. Ingress público documentado. Fail closed si falta el secreto de borde. | W-01, W-04 |
-| API9 Improper Inventory | Aplica | `run.app` queda en el inventario del runbook. No se publica en el cliente. | W-04 |
-| API10 Unsafe Consumption of APIs | Aplica | Timeout de 120 s hacia Cloud Run. No se registra el Bearer ni el header. | T-07 |
+| API8 Security Misconfiguration | Aplica | Secretos en Secret Manager. El servicio exige autenticación. La cuenta de invocación no tiene roles de proyecto. Los errores de configuración no imprimen el valor. | W-05, W-04 |
+| API9 Improper Inventory | Aplica | La URL `run.app` vive en Vercel, no en el cliente. | T-07 |
+| API10 Unsafe Consumption of APIs | Aplica | Timeout de 120 s hacia Cloud Run. No se registra el Bearer ni el token de identidad ni la clave privada. | T-07 |
 | A01 Broken Access Control (web) | Aplica | Misma puerta que el resto del super admin. | T-05, T-06 |
 | A03 Injection | Aplica en la migración y en el reclaim | SQL parametrizado, como el `claimPendingBatch` actual. Sin armar SQL con el id. | W-03, T-04 |
 | A09 Logging | Aplica | No loguear teléfonos completos (el worker ya enmascara). [repo: whatsapp_rulett-app/src/processor.ts] El historial del super admin muestra el resultado, no el token de Meta. | T-06 |
@@ -160,7 +164,7 @@ Hotspots: comparación de secretos, índice único parcial, reclaim de `PROCESSI
 | `GOOGLE_CLOUD_LOCATION` vacío | entornos que no generan IA | Siguen en `us-central1`. Producción que sí genera debe poner `global` en el mismo deploy de T-02. |
 | Único de tres columnas | cron de la mañana | El único parcial conserva el mismo rechazo al segundo automático. |
 | `POST /api/trigger` inmediato | rulett-app | Sigue siendo 200 con `triggered: true`. Tarda más. Render no corre este build. |
-| Header nuevo | nadie hoy | Solo el proceso con `EDGE_SHARED_SECRET` lo exige. El corte es el cambio de URL, no un deploy ciego. |
+| URL de Render | crons de Vercel | Sin las variables de la cuenta de invocación, y con la URL de Render, no se envía token. El corte es cambiar la URL después de activar IAM. |
 | Sondeo cada 60 s | mensajes encolados de noche en Render | Render no cambia hasta suspenderlo. En Cloud Run, lo de después de las 20:45 sale a las 08:00. Aceptado. [humano, 2026-10-08] |
 
 Rollback de IA: variables al modelo anterior y redeploy de Vercel. Rollback del worker: `WHATSAPP_WORKER_TRIGGER_URL` de vuelta a Render y se vuelve a encender ese servicio. La migración no se revierte: las filas forzadas no estorban al cron.
@@ -196,11 +200,10 @@ El Dockerfile actual ya escucha 8080 y corre como usuario sin privilegios. [repo
 
 ### 3. Secretos
 
-Crear en Secret Manager, uno por valor, los mismos que hoy tiene Render más el nuevo:
+Crear en Secret Manager, uno por valor, los mismos que hoy tiene Render:
 
 - `whatsapp-database-url`
 - `whatsapp-worker-api-key` (el mismo `WORKER_API_KEY` de Vercel)
-- `whatsapp-edge-secret` (nuevo, largo, distinto del Bearer; el mismo valor va al Cloudflare Worker)
 - `whatsapp-token`
 
 No van a Secret Manager: `WHATSAPP_PHONE_ID`, `WHATSAPP_ACCOUNT_ID`, `WHATSAPP_LANGUAGE_CODE`, `BATCH_SIZE`. Van como env de texto.
@@ -221,48 +224,35 @@ gcloud run deploy whatsapp-rulett \
   --max-instances=2 \
   --min-instances=0 \
   --set-env-vars=NODE_ENV=production,DATABASE_SSL=true,BATCH_SIZE=50,WHATSAPP_LANGUAGE_CODE=es_CO,WHATSAPP_PHONE_ID=$WHATSAPP_PHONE_ID,WHATSAPP_ACCOUNT_ID=$WHATSAPP_ACCOUNT_ID \
-  --set-secrets=DATABASE_URL=whatsapp-database-url:latest,WORKER_API_KEY=whatsapp-worker-api-key:latest,EDGE_SHARED_SECRET=whatsapp-edge-secret:latest,WHATSAPP_TOKEN=whatsapp-token:latest
+  --set-secrets=DATABASE_URL=whatsapp-database-url:latest,WORKER_API_KEY=whatsapp-worker-api-key:latest,WHATSAPP_TOKEN=whatsapp-token:latest
 ```
 
 No pases `--no-cpu-throttling`: no es una bandera válida y el CPU durante la request ya es el default. [humano, 2026-10-08]
 
 Antes del comando, en la misma shell, exporta `WHATSAPP_PHONE_ID` y `WHATSAPP_ACCOUNT_ID` copiados de Render. `loadConfig()` los exige al arrancar: si faltan en el primer deploy, la revisión no levanta. No escribas esos valores en este archivo.
 
-`--allow-unauthenticated` es deliberado (D-04). La identidad de invocación de Google no sirve: rulett-app no debe conocer la URL de `run.app`, y quien llama esa URL es Cloudflare, que no firma con IAM de Google.
-
-Probe: `GET /health`.
+El primer deploy puede haber quedado con `--allow-unauthenticated`. El corte a IAM, más abajo, lo cierra. No uses un probe HTTP a `/health`.
 
 Presupuesto: alerta en la cuenta de facturación de GCP al pasar de US$5 en el mes. La capa gratis de Cloud Run (solicitud, vCPU-segundo y GiB-segundo; confirmar cifras vigentes en la página de precios) cubre 96 disparos cortos al día. Si la alerta suena, no se sube `min-instances`.
 
-### 5. Cloudflare
+### 5. Corte a IAM
 
-Subdominio `worker.rulett.app`. El dominio ya está en Cloudflare. [humano, 2026-10-08]
+El servicio ya está desplegado. No borres `EDGE_SHARED_SECRET` hasta que la revisión nueva, que lo ignora, esté sirviendo tráfico. Si lo borras antes, la revisión vieja responde 503.
 
-Un Cloudflare Worker en la ruta de ese host:
+1. Desplegar en Cloud Run la revisión de la rama `cloud-run` que ya no exige el secreto de borde. Render sigue con la URL de Vercel.
+2. Crear la cuenta `whatsapp-worker-invoker` sin roles de proyecto.
+3. Darle `roles/run.invoker` solo sobre el servicio `whatsapp-rulett-app` en `us-central1`.
+4. Crear una clave JSON. En Vercel, `WHATSAPP_WORKER_INVOKER_CLIENT_EMAIL` y `WHATSAPP_WORKER_INVOKER_PRIVATE_KEY` (los saltos de línea como en la clave de Vertex). Todavía no cambies la URL.
+5. Desplegar rulett-app con T-07. Con la URL de Render no envía token.
+6. `gcloud run services update whatsapp-rulett-app --no-allow-unauthenticated --region=us-central1`
+7. Cambiar `WHATSAPP_WORKER_TRIGGER_URL` a `https://<servicio>.run.app/api/trigger` y redesplegar Vercel.
+8. Probar, en este orden: sin token, Google responde 403 y la cola no se mueve. Con token y sin Bearer, el worker responde 401. Con token y Bearer, 200.
+9. Quitar `EDGE_SHARED_SECRET` del servicio y borrar el secreto en Secret Manager si existía.
+10. Forzar un aviso al teléfono del analista. Si llega, suspender Render. No borrarlo el mismo día.
 
-1. Lee el secreto `EDGE_SHARED_SECRET` de Cloudflare (mismo valor que Secret Manager).
-2. Reenvía método, path, query y header `Authorization` a `https://<servicio>.run.app`.
-3. Agrega `X-Rulett-Edge-Secret`.
-4. Devuelve el status y el body de Cloud Run.
+### 6. Rollback
 
-No cachear `POST`. Timeout del Worker ≥ 120 s (límite del plan de Cloudflare: comprobarlo al crearlo; si el plan corta antes, el síntoma es 524 y filas `PROCESSING`, que el reclaim de D-05 devuelve a pendiente).
-
-DNS del subdominio: ruta de Worker, proxy naranja activo.
-
-### 6. Corte
-
-1. Dejar Render encendido.
-2. Probar `GET https://worker.rulett.app/health` → 200.
-3. Probar `POST https://worker.rulett.app/api/trigger` sin Bearer → 401 y la cola no se mueve.
-4. Probar `POST` directo a `run.app` con Bearer y sin el header → 401.
-5. En Vercel, `WHATSAPP_WORKER_TRIGGER_URL=https://worker.rulett.app/api/trigger`. Redeploy (T-07).
-6. Forzar un aviso al teléfono del analista desde el super admin.
-7. Si llega, suspender el servicio en Render. No borrarlo hasta el día siguiente.
-8. Anotar la URL de `run.app` solo en el runbook interno, no en Vercel.
-
-### 7. Rollback
-
-`WHATSAPP_WORKER_TRIGGER_URL` de vuelta a `https://whatsapp-rulett-app.onrender.com/api/trigger`, reanudar Render, redeploy de Vercel. Cloud Run puede quedar en cero instancias.
+`WHATSAPP_WORKER_TRIGGER_URL` de vuelta a `https://whatsapp-rulett-app.onrender.com/api/trigger` y redeploy de Vercel. Render sigue atendiendo. Cloud Run puede quedar exigiendo IAM: no afecta mientras nadie lo llame.
 
 ## Supuestos de esta planeación
 
