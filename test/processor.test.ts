@@ -37,10 +37,21 @@ const platformRow: WhatsappQueueRow = {
   sentAt: null,
 };
 
-function fakeQueue(rows: WhatsappQueueRow[]) {
-  const calls = { sent: [] as string[], failed: [] as Array<[string, string]> };
+function fakeQueue(rows: WhatsappQueueRow[], reclaimed = 0) {
+  const calls = {
+    sent: [] as string[],
+    failed: [] as Array<[string, string]>,
+    order: [] as string[],
+  };
   const queue = {
-    claimPendingBatch: async () => rows,
+    reclaimStaleProcessing: async () => {
+      calls.order.push('reclaim');
+      return reclaimed;
+    },
+    claimPendingBatch: async () => {
+      calls.order.push('claim');
+      return rows;
+    },
     markSent: async (id: string) => {
       calls.sent.push(id);
     },
@@ -98,5 +109,27 @@ describe('processBatch', () => {
 
     assert.equal(await processBatch(queue, fakeWhatsapp({ ok: true }), 50), 0);
     assert.deepEqual(calls.sent, []);
+  });
+
+  it('devuelve las filas PROCESSING abandonadas antes de reclamar y loguea el conteo sin teléfono', async () => {
+    const logs = captureLogs();
+    const { queue, calls } = fakeQueue([platformRow], 3);
+
+    await processBatch(queue, fakeWhatsapp({ ok: true }), 50);
+
+    assert.deepEqual(calls.order, ['reclaim', 'claim']);
+    const reclaimLog = logs.find((e) => e.message === 'Filas PROCESSING abandonadas devueltas a PENDING');
+    assert.ok(reclaimLog);
+    assert.equal(reclaimLog.count, 3);
+    assert.ok(!JSON.stringify(reclaimLog).includes('573001234567'));
+  });
+
+  it('sin filas abandonadas no loguea reclaim', async () => {
+    const logs = captureLogs();
+    const { queue } = fakeQueue([], 0);
+
+    await processBatch(queue, fakeWhatsapp({ ok: true }), 50);
+
+    assert.ok(!logs.some((e) => e.message === 'Filas PROCESSING abandonadas devueltas a PENDING'));
   });
 });

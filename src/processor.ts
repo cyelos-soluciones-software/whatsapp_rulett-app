@@ -54,6 +54,11 @@ export async function processBatch(
   whatsapp: WhatsappClient,
   batchSize: number,
 ): Promise<number> {
+  const reclaimed = await queue.reclaimStaleProcessing();
+  if (reclaimed > 0) {
+    log('warn', 'Filas PROCESSING abandonadas devueltas a PENDING', { count: reclaimed });
+  }
+
   const rows = await queue.claimPendingBatch(batchSize);
 
   if (rows.length === 0) {

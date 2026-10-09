@@ -1,3 +1,4 @@
+import { createBatchRunner } from './batch-runner.js';
 import { loadConfig, maskDatabaseUrl } from './config.js';
 import { QueueRepository } from './db/queue.js';
 import { formatError, logFatalError } from './lib/errors.js';
@@ -26,42 +27,19 @@ async function main(): Promise<void> {
   log('info', 'Configuración cargada', {
     databaseHost: maskDatabaseUrl(config.databaseUrl),
     databaseSsl: config.databaseSsl,
-    pollIntervalMs: config.pollIntervalMs,
     batchSize: config.batchSize,
     httpPort: config.httpPort,
+    edgeSecretConfigured: config.edgeSharedSecret !== '',
   });
 
   const queue = new QueueRepository(config);
   const whatsapp = new WhatsappClient(config);
-
-  let running = true;
-  let inFlight = false;
-
-  const runBatch = async (source: 'poll' | 'trigger'): Promise<void> => {
-    if (inFlight) {
-      log('info', 'Procesamiento omitido: ya hay un lote en curso', { source });
-      return;
-    }
-
-    inFlight = true;
-    try {
-      const count = await processBatch(queue, whatsapp, config.batchSize);
-      log('info', 'Ciclo de procesamiento finalizado', { source, processed: count });
-    } catch (error) {
-      log('error', 'Error en ciclo de procesamiento', {
-        source,
-        error: formatError(error),
-      });
-    } finally {
-      inFlight = false;
-    }
-  };
+  const runner = createBatchRunner(() => processBatch(queue, whatsapp, config.batchSize));
 
   const shutdown = async (signal: string): Promise<void> => {
     log('info', 'Señal de apagado recibida, deteniendo worker...', { signal });
-    running = false;
 
-    while (inFlight) {
+    while (runner.isRunning()) {
       await sleep(250);
     }
 
@@ -89,32 +67,19 @@ async function main(): Promise<void> {
 
   log('info', 'Conexión a PostgreSQL verificada');
 
+  // Sin sondeo: cada lote lo dispara /api/trigger (cron de rulett-app vía Cloudflare).
   startTriggerServer({
     port: config.httpPort,
     apiKey: config.workerApiKey,
-    onTrigger: () => {
-      void runBatch('trigger');
-    },
+    edgeSecret: config.edgeSharedSecret,
+    onTrigger: () => runner.run(),
   });
 
   log('info', 'Worker iniciado', {
-    pollIntervalMs: config.pollIntervalMs,
     batchSize: config.batchSize,
     phoneId: config.whatsappPhoneId,
     accountId: config.whatsappAccountId,
   });
-
-  while (running) {
-    await runBatch('poll');
-
-    if (!running) {
-      break;
-    }
-
-    await sleep(config.pollIntervalMs);
-  }
-
-  await queue.close();
 }
 
 main().catch((error) => {

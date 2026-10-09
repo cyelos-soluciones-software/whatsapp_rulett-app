@@ -122,6 +122,24 @@ export class QueueRepository {
   }
 
   /**
+   * Devuelve a PENDING las filas PROCESSING abandonadas (crash o timeout).
+   * Si Meta ya había aceptado el mensaje, se reenvía: riesgo aceptado en el SDD 054.
+   */
+  async reclaimStaleProcessing(): Promise<number> {
+    const result = await this.pool.query(
+      `
+      UPDATE "WhatsappQueue"
+      SET
+        status = 'PENDING',
+        "updatedAt" = NOW()
+      WHERE status = 'PROCESSING'
+        AND "updatedAt" < NOW() - INTERVAL '15 minutes'
+      `,
+    );
+    return result.rowCount ?? 0;
+  }
+
+  /**
    * Reclama un lote con bloqueo optimista usando FOR UPDATE SKIP LOCKED.
    * Seguro para múltiples réplicas del worker.
    */

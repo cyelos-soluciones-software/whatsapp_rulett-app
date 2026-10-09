@@ -3,10 +3,11 @@ import 'dotenv/config';
 export interface Config {
   databaseUrl: string;
   databaseSsl: boolean;
-  pollIntervalMs: number;
   batchSize: number;
   httpPort: number;
   workerApiKey: string;
+  /** Vacío = `/api/trigger` responde 503 (fallar cerrado); no se exige al arrancar. */
+  edgeSharedSecret: string;
   whatsappToken: string;
   whatsappPhoneId: string;
   whatsappAccountId: string;
@@ -112,10 +113,10 @@ export function loadConfig(): Config {
   return {
     databaseUrl,
     databaseSsl,
-    pollIntervalMs: parsePositiveInt('POLL_INTERVAL_MS', 60_000),
     batchSize: parsePositiveInt('BATCH_SIZE', 50),
     httpPort,
     workerApiKey: requireEnv('WORKER_API_KEY'),
+    edgeSharedSecret: process.env.EDGE_SHARED_SECRET?.trim() ?? '',
     whatsappToken: requireEnv('WHATSAPP_TOKEN'),
     whatsappPhoneId: requireEnv('WHATSAPP_PHONE_ID'),
     whatsappAccountId: requireEnv('WHATSAPP_ACCOUNT_ID'),

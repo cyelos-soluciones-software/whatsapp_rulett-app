@@ -5,7 +5,7 @@
 | Recurso | Detalle |
 |---|---|
 | Runtime | Node.js ≥ 20 LTS |
-| Tipo de servicio | **Web Service** (expone `POST /api/trigger` + polling en background) |
+| Tipo de servicio | **Web Service** (expone `POST /api/trigger`; el build de Render además sondea, el de Cloud Run no — ver [Cloud Run](#cloud-run)) |
 | Base de datos | PostgreSQL (Neon recomendado) |
 | Variables de entorno | Ver `.env.example` |
 | Build | `npm install && npm run build` |
@@ -56,6 +56,21 @@ NODE_ENV=production
 - Configurar health check en `GET /health` (recomendado en Web Service).
 - Logs disponibles en el dashboard (formato JSON).
 - Para escalar: aumentar número de instancias (el claim con `SKIP LOCKED` lo soporta).
+
+---
+
+## Cloud Run
+
+Runbook completo (Artifact Registry, Secret Manager, servicio, Cloudflare, corte y rollback): [`openspec/changes/active/054-gemini-aviso-cloud-run/design.md`](../openspec/changes/active/054-gemini-aviso-cloud-run/design.md), sección «Paso a paso — Cloud Run».
+
+Este build (rama `cloud-run`) se comporta distinto del que corre en Render:
+
+- **Sin sondeo.** No hay bucle de `POLL_INTERVAL_MS`. Cada lote lo dispara `/api/trigger` (cron de rulett-app cada 15 minutos, 08:00–20:45 Bogotá). Lo encolado de noche sale en el primer disparo de las 08:00.
+- **El disparo responde al terminar el lote:** `{ "triggered": true, "processed": <n> }`; con un lote en curso, `processed: 0` y `busy: true`; si el lote lanza, 500 genérico.
+- **Dos secretos en `GET`/`POST /api/trigger`:** `Authorization: Bearer <WORKER_API_KEY>` y `X-Rulett-Edge-Secret: <EDGE_SHARED_SECRET>` (lo agrega solo el Cloudflare Worker). Bearer incorrecto → 401. Bearer correcto con `EDGE_SHARED_SECRET` vacío en el proceso → 503. Header de borde incorrecto → 401. En ningún caso se procesa la cola. `GET /health` no pide secretos.
+- **Reclaim:** antes de cada lote, las filas `PROCESSING` con `updatedAt` de hace más de 15 minutos vuelven a `PENDING`. Si Meta ya había aceptado el mensaje, se reenvía (riesgo aceptado en el SDD 054).
+
+**Render no debe recibir este build.** Sin `EDGE_SHARED_SECRET` respondería 503 a todos los disparos y, sin sondeo, la cola dejaría de moverse. Render sigue con el código de `main` hasta suspenderlo en el corte.
 
 ---
 
@@ -162,4 +177,4 @@ Actualmente el worker emite logs JSON a stdout. En producción:
 Campos clave para alertas:
 - `"level":"error"` — fallos de envío o ciclo de polling.
 - `"message":"Fallo al enviar mensaje"` — error de Meta API.
-- Registros `PROCESSING` huérfanos > 10 min — worker crasheó.
+- Registros `PROCESSING` huérfanos > 15 min — worker crasheó o lo cortó un timeout. El build de Cloud Run los devuelve a `PENDING` en el siguiente lote y loguea `"Filas PROCESSING abandonadas devueltas a PENDING"`; el de Render no.

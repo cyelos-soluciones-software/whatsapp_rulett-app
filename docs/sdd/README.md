@@ -4,4 +4,4 @@ Esta carpeta no es la memoria del proyecto. [humano, 2026-10-01]
 
 El canon es `openspec/`. La historia en curso está en `openspec/changes/active/051-recordatorio-juego-descubre/`. El estado del worker está en `openspec/specs/`.
 
-No se vuelve a escribir un SDD aquí.
+No se vuelve a escribir un SDD aquí. El plan `17tnjrabmxn` está en `openspec/changes/active/054-gemini-aviso-cloud-run/`. [humano, 2026-10-08]
