@@ -1,4 +1,4 @@
-SDD: 17tnjrabmxn · v2 · 2026-10-08
+SDD: 17tnjrabmxn · v8 · 2026-10-09
 
 # Propuesta — 17tnjrabmxn
 
@@ -18,7 +18,8 @@ La IA sigue funcionando después del 16/10. El super admin puede comprobar el av
 
 - Tres usos de IA de rulett-app a `gemini-3.1-flash-lite`, región `global`, nombre de modelo por variable de entorno.
 - Set de referencia (5 comercios y 5 intenciones de SMS) comparado por el analista. No es un arnés automático.
-- Botón en `/super-admin/tenants/[tenantId]/suscripcion` para forzar el aviso de 7 días o el de vencimiento, con historial.
+- Botón «Forzar avisos de suscripción» en `/super-admin/tenants`, al lado de «Forzar reinicio de límites». Corre el mismo pase que el cron. No elige comercio ni plantilla y no agrega historial en la ficha.
+- La ventana del aviso pasa de «hoy y en 7 días» a «mañana y en 7 días». `DUE_DAY` significa «falta 1 día». Los dos avisos usan `recordatorio_suscripcion_7d`.
 - Cerrar en producción los pendientes de `17tnjra85qn` que bloquean el WhatsApp (migración, interruptor, plantillas). Lo ejecuta el humano; el SDD le deja las consultas.
 - Worker: el disparo procesa el lote y después responde; exige el Bearer. Cloud Run exige además un token de identidad de una cuenta de servicio solo para invocar.
 - Cloud Run + Artifact Registry + Secret Manager. Runbook en `design.md`. Sin Cloudflare.
@@ -27,7 +28,8 @@ La IA sigue funcionando después del 16/10. El super admin puede comprobar el av
 ## No alcance
 
 - Chat y embeddings de kb-rulett-app.
-- Cambiar prompts, reglas de vigencia, textos de plantillas o las reglas del cron de la mañana.
+- Cambiar prompts, reglas de vigencia de cupones o el texto de las plantillas en Meta.
+- El worker de WhatsApp. La plantilla de 1 día es la de 7 días, con otro `dias`.
 - Mover rulett-app fuera de Vercel, ni el SMS a otro proveedor.
 - Cerrar `*.run.app` con un balanceador de Google.
 - Recuperar días de aviso automático que ya pasaron.
@@ -39,7 +41,7 @@ La IA sigue funcionando después del 16/10. El super admin puede comprobar el av
 |---|---|
 | Administrador de comercio | Sigue generando cupones y SMS con IA. Si la IA falla, ve el mismo error de hoy. |
 | Quien se registra o a quien da de alta el super admin | El comercio nuevo sigue naciendo con 3 cupones iniciales si la IA responde. |
-| Super admin | Puede forzar un aviso y ver el historial en la ficha de suscripción. |
+| Super admin | Desde el listado de empresas dispara el pase de avisos del día, el mismo que a las 08:00. |
 | Operación | Despliega el worker en Google Cloud y apaga Render. |
 
 ## Criterios de aceptación
@@ -48,7 +50,7 @@ Los de [proyecto: historias/gemini-31-aviso-renovacion-cloud-run/historia.md], s
 
 - Cupones y SMS con IA válidos; alta con 3 cupones; alta que no falla si la IA no responde.
 - Comparación del set de referencia aprobada por el analista.
-- Forzar aviso de 7 días o de vencimiento, también si ya salió o la suscripción venció. Sin teléfono, no envía. Meta rechaza → SMS. No gasta cupo. Doble pulsación = un envío. No tapa el automático del día.
+- Desde el listado, el super admin dispara el pase del día: solo comercios que vencen mañana o en 7 días. No elige plantilla ni reenvía si ya salió. El de 1 día usa `recordatorio_suscripcion_7d` con `dias` = `"1"`. Meta rechaza → SMS, y el pase de cada 15 minutos cierra `SENT_SMS` o `NOT_DELIVERED` aunque el interruptor esté apagado. No gasta cupo. Un segundo clic, o el cron del mismo día, no manda otro mensaje.
 - Campaña de un comercio y aviso de las 08:00 salen con el worker en Cloud Run.
 - Una llamada a `run.app` sin el token de identidad no entra al contenedor. Con token y sin la clave del worker, no procesa la cola.
 - Convivencia Render + Cloud Run sin duplicar ni perder los mensajes en cola.
@@ -56,7 +58,7 @@ Los de [proyecto: historias/gemini-31-aviso-renovacion-cloud-run/historia.md], s
 ## Riesgos
 
 - T-01 puede invalidar la fase de IA (esquema JSON, razonamiento que se come el tope de 2048 del SMS, 404 de región).
-- El único `(tenantId, kind, expiresOn)` impide el reenvío. Hay que partirlo. [repo: rulett-app/prisma/schema.prisma]
+- El único `(tenantId, kind, expiresOn)` se conserva. El botón y el cron de las 08:00 no duplican el aviso del mismo día. No hay reenvío fuera de esa ventana. [repo: rulett-app/prisma/schema.prisma]
 - Si Vercel corta el cron antes de que Cloud Run termine el lote, el cliente aborta. Supuesto: el plan admite ≥ 60 s. [SUPUESTO — confirmar]
 - Un lote muerto en `PROCESSING` no se reintenta hoy. [repo: whatsapp_rulett-app/docs/DEPLOYMENT.md] Cloud Run puede matar el request al llegar al timeout.
 - Plantillas de Meta sin aprobar: el aviso forzado cae a SMS. No es un defecto.
@@ -64,4 +66,4 @@ Los de [proyecto: historias/gemini-31-aviso-renovacion-cloud-run/historia.md], s
 
 ## Preguntas abiertas
 
-Ninguna bloquea el plan. Quedan como supuesto en `design.md`: duración del cron en Vercel, botón con el interruptor apagado, ventana de 2 minutos para la doble pulsación, región `us-central1` para Cloud Run.
+Ninguna bloquea el plan. Quedan como supuesto en `design.md`: duración del cron en Vercel y región `us-central1` para Cloud Run. El botón no mira el interruptor, y el pase de 15 minutos reconcilia siempre: eso ya no es supuesto.

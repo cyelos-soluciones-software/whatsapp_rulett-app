@@ -1,4 +1,4 @@
-SDD: 17tnjrabmxn · v2 · 2026-10-08
+SDD: 17tnjrabmxn · v8 · 2026-10-09
 
 # Spec — 17tnjrabmxn
 
@@ -26,39 +26,55 @@ Si Vertex falla en "generar cupones" o "sugerir SMS", el administrador ve el mis
 
 Set fijo, armado por el analista el día de la prueba: 5 comercios de categorías distintas y 5 intenciones de SMS. Se corre una vez con 2.5 (antes del deploy, o con la variable apuntando al modelo viejo) y una vez con 3.1. Criterio: 100 % de JSON válido y de reglas R-01/R-02. La calidad del texto la aprueba el analista por escrito en `decisions.md`. Sin esa nota, la fase de IA no se da por cerrada.
 
-## Aviso forzado
+## Aviso desde el listado
 
-### R-06 · Elección
+### R-06 · Dónde y qué corre
 
-Solo super admin, en la ficha de suscripción del comercio. Elige `SEVEN_DAYS` o `DUE_DAY`. El WhatsApp usa la plantilla que ya corresponde a ese tipo. [repo: rulett-app/src/lib/billing/subscription-reminder.ts] El texto es el de la plantilla: forzar "7 días" cuando faltan 3 sigue diciendo que faltan 7. La pantalla lo dice antes de confirmar.
+Solo super admin, en `/super-admin/tenants`, en el mismo grupo que «Forzar reinicio de límites». [humano, 2026-10-09] [repo: rulett-app/src/app/super-admin/tenants/page.tsx] El botón se llama «Forzar avisos de suscripción». Pide confirmación. No elige comercio ni plantilla.
 
-### R-07 · Cuándo se puede
+Ejecuta `enqueueSubscriptionReminders` del día (vencen mañana o en 7 días, America/Bogota; ver R-20), luego el disparo del worker si encoló al menos uno, y luego `reconcileSubscriptionReminders`. [repo: rulett-app/src/lib/billing/subscription-reminder-queue.ts] Las exclusiones del cron se quedan: comercio inactivo, sin teléfono internacionalizable, pago manual en revisión, suscripción ya vencida.
 
-Hay teléfono de contacto internacionalizable y hay suscripción, para saber la fecha de vencimiento. No importa si ese aviso ya salió en el ciclo, si la suscripción venció, si hay un pago manual en revisión, ni si el comercio está inactivo. Esas exclusiones son del cron, no del botón. [proyecto: historia.md] [humano, 2026-10-08] El interruptor `SUBSCRIPTION_REMINDERS_ENABLED` tampoco lo frena. Con el interruptor apagado, el pase de cada 15 minutos igual cierra las filas forzadas (`forcedByUserId` no nulo): pasan a enviado o, si Meta rechazó, a SMS. Las filas automáticas de ese pase siguen sin tocarse. Sin suscripción, no se envía nada.
+### R-07 · Interruptor
 
-### R-08 · Sin teléfono
+El botón no consulta `SUBSCRIPTION_REMINDERS_ENABLED`. `runSubscriptionReminderCron` sí: con el interruptor apagado no encola. `reconcileSubscriptionRemindersSafely` tampoco lo consulta: cada 15 minutos cierra filas ya encoladas (`SENT_WHATSAPP`, SMS de respaldo, `SENT_SMS`, `NOT_DELIVERED`) y no crea avisos nuevos. [repo: rulett-app/src/lib/billing/subscription-reminder-queue.ts] [repo: rulett-app/src/app/api/cron/send-whatsapp/route.ts]
 
-No se crea fila en `WhatsappQueue` ni en `SmsQueue`. Se crea `SubscriptionReminder` `NOT_DELIVERED` con `forcedByUserId`. La pantalla dice que el comercio no tiene teléfono de contacto.
+### R-08 · Nadie en la ventana
+
+Si `queued` es 0, no llama al worker. El toast dice que no encoló avisos. No es un error.
 
 ### R-09 · Cadena
 
-WhatsApp primero. Si esa fila queda `FAILED`, el mismo request reconcilia y encola el SMS de plataforma al mismo contacto. El historial pasa a `SENT_SMS` cuando el SMS sale, o a `NOT_DELIVERED` si el SMS también falla. Misma máquina que el cron. [repo: subscription-reminder-queue.ts]
+La misma del cron: WhatsApp primero; si esa fila queda `FAILED`, la reconciliación encola el SMS de plataforma. Origen `PLATFORM`. No incrementa el cupo mensual del comercio. El clic solo alcanza a ver el WhatsApp terminado si el worker responde al acabar el lote (Cloud Run). `SENT_SMS`, `NOT_DELIVERED` y el cierre cuando Render respondió antes de procesar los hace el pase de 15 minutos, también con el interruptor apagado.
 
-### R-10 · Cupo
+### R-10 · Segundo clic
 
-El origen de la cola es `PLATFORM`. No incrementa el consumo mensual del comercio.
+La clave única `(tenantId, kind, expiresOn)` sigue. Un segundo clic el mismo día no crea otra fila ni otro WhatsApp. El conteo de duplicados sube. No hay `forcedByUserId`.
 
-### R-11 · Doble pulsación
+### R-11 · Toast
 
-Dos requests del mismo comercio y el mismo `kind` con un forzado todavía `QUEUED_WHATSAPP` creado hace menos de 2 minutos producen una sola fila y un solo WhatsApp. El segundo request responde éxito apuntando a la fila existente.
+Éxito: encolados, omitidos, duplicados, y si el disparo respondió. Error de sesión o de excepción: el texto de la acción. Sin teléfonos y sin `errorLog` de Meta. Mientras corre, el botón dice «Enviando…» y no acepta otro clic.
 
-### R-12 · No tapa el automático
+### R-12 · Misma base
 
-Una fila forzada no ocupa el único parcial. El cron de las 08:00, si el día es de aviso y el interruptor está encendido, inserta su propia fila. Pueden salir los dos el mismo día. Aceptado. [humano, 2026-10-08]
+El clic en `lab.rulett.app` escribe en la Neon del Preview. Cloud Run solo envía esas filas si su `DATABASE_URL` es esa base. [humano, 2026-10-09] Si Cloud Run sigue en producción, el toast puede decir encolados y el worker responde que no hay pendientes: la fila está en la otra base.
 
-### R-13 · Historial
+### R-13 · Fuera de este corte
 
-La ficha lista los avisos del comercio, automáticos y forzados, del más nuevo al más viejo: fecha de creación, tipo, si fue forzado, estado (`QUEUED_WHATSAPP`, `SENT_WHATSAPP`, `SENT_SMS`, `NOT_DELIVERED`). No muestra el cuerpo del error de Meta en la pantalla; eso sigue en `WhatsappQueue.errorLog` para quien consulte la base.
+No hay botón por fila, ni elección de plantilla, ni historial en la ficha de suscripción. Un comercio que no vence mañana ni en 7 días no recibe mensaje por este botón. El que vence hoy tampoco.
+
+### R-20 · Mañana y en 7 días, una sola plantilla
+
+`resolveReminderKind` devuelve `DUE_DAY` si la fecha calendario de `expiresAt` en `America/Bogota` es mañana, y `SEVEN_DAYS` si es hoy + 7. El mismo día calendario devuelve null. [repo: rulett-app/src/lib/billing/subscription-reminder.ts] `expiresAtWindows` prefiltra esos dos días, ya no el día de hoy. [repo: rulett-app/src/lib/billing/subscription-reminder-queue.ts]
+
+`isSubscriptionActive` no cambia: si el instante ya pasó, no hay aviso. [repo: rulett-app/src/lib/billing/subscription-access.ts] Con `now` = `2026-10-01T13:00:00.000Z` (08:00 Bogotá), `expiresAt` = `2026-10-02T05:00:00.000Z` (medianoche de Bogotá del día siguiente) es `DUE_DAY` y `expiresOn` = `2026-10-02`. El mismo instante evaluado el `2026-10-02T13:00:00.000Z` sale `expired` y no se avisa. Ese es el caso que hoy se pierde.
+
+Los dos tipos encolan `recordatorio_suscripcion_7d`. `dias` es el texto `"7"` o `"1"`, según un mapa por tipo. `recordatorio_suscripcion_hoy` no se encola. La validación de esa plantilla acepta `nombre_comercio` no vacío y `dias` solo `"7"` o `"1"`. [repo: rulett-app/src/lib/whatsapp-template-params.ts]
+
+El SMS de `DUE_DAY` termina en `, manana vence tu suscripcion en Rulett. Paga en https://www.rulett.app/admin/suscripcion`, sin tildes, y sigue cabiendo en 160 recortando solo el nombre. [repo: rulett-app/src/lib/sms-charset.ts]
+
+No hay migración. Las filas viejas con `DUE_DAY` significan «el vencimiento era ese día calendario». Las nuevas significan «se avisó el día anterior». `expiresOn` es la fecha del vencimiento en los dos casos. No se reinterpretan las viejas.
+
+Si el cuerpo en Meta dice «faltan {{dias}} días», el de 1 día se lee «faltan 1 días». Aceptado en este corte. No se pide otra plantilla. El worker no se modifica.
 
 ## Worker y corte
 
@@ -92,8 +108,8 @@ Una fila `PROCESSING` más de 15 minutos vuelve a `PENDING` y entra en el siguie
 |---|---|
 | Vertex 404 por región | T-01 para el deploy. En producción, el administrador ve R-04. El alta cumple R-03. |
 | Meta rechaza la plantilla | R-09. No se reintenta el WhatsApp de esa fila. |
-| `triggerWhatsappWorker` falla por red | La fila forzada queda `QUEUED_WHATSAPP`. El cron de 15 minutos la recoge. La pantalla dice que quedó encolado y se enviará en el siguiente ciclo. |
-| Dos crons y un forzado a la vez | El único parcial deja un solo automático. El forzado es otra fila. El claim reparte las colas. |
+| `triggerWhatsappWorker` falla por red | La fila queda `QUEUED_WHATSAPP`. El pase de 15 minutos la cierra. La pantalla dice que quedó en cola y sale en el siguiente ciclo. |
+| Botón y cron de las 08:00 el mismo día | La clave única deja una sola fila. No hay una segunda fila «forzada». El claim reparte las colas de WhatsApp. |
 | Timeout de Cloud Run a mitad de lote | Lo ya marcado `SENT` no se repite. Lo que quedó `PROCESSING` lo recoge R-18, con el riesgo de doble envío descrito en D-05. |
 
 ## Matriz
@@ -105,14 +121,14 @@ Una fila `PROCESSING` más de 15 minutos vuelve a `PENDING` y entra en el siguie
 | Alta con 3 cupones, por los dos orígenes | R-03 | T-02 | Tests de bootstrap ya existentes, siguen verdes |
 | IA caída, alta no falla, error visible | R-04 | T-02 | Tests de bootstrap y de las actions |
 | Set de referencia | R-05 | T-01, T-02 | Nota del analista en `decisions.md` |
-| Elige el tipo y el contacto lo recibe | R-06, R-09 | T-05, T-06 | Test de la acción con cola mockeada + 1 envío real en el corte |
-| Reenvío y suscripción vencida | R-07 | T-05 | Test: no mira vencimiento ni duplicado del cron |
-| Sin teléfono | R-08 | T-05, T-06 | Test + estado vacío de la pantalla |
-| SMS si Meta rechaza | R-09 | T-05 | Test: cola WhatsApp `FAILED` → fila SMS |
-| No gasta cupo | R-10 | T-05 | Test: origen `PLATFORM`, contadores intactos |
-| Doble pulsación | R-11 | T-05 | Test de dos llamadas seguidas |
-| No tapa el automático | R-12 | T-04, T-05 | Test de integración del único parcial, o test del SQL contra la base de Docker |
-| Historial | R-13 | T-06 | Test del query |
+| El listado dispara el pase del día | R-06, R-07 | T-05, T-06 | Test: interruptor apagado igual encola; el cron de la mañana con interruptor apagado no; el pase seguro con interruptor apagado sí consulta la cola |
+| Aviso mañana y a 7 días, una plantilla | R-20 | T-09 | Test: medianoche Bogotá del día siguiente → `DUE_DAY`; el mismo instante al día siguiente → `expired`; `dias` `"1"` y `"7"`; SMS «manana» |
+| Nadie en la ventana | R-08 | T-05 | Test: `queued` 0 y cero llamadas al trigger |
+| SMS si Meta rechaza, sin gastar cupo | R-09 | T-05 | Test: cola WhatsApp `FAILED` → fila SMS `PLATFORM`; contadores intactos |
+| Segundo clic | R-10 | T-05 | Test: el duplicado de la clave única no inserta otra fila |
+| Toast sin teléfono | R-11 | T-06 | Test del texto armado |
+| Otra base, el worker no ve la fila | R-12 | — | Prueba manual en lab, después de apuntar Cloud Run |
+| Sin aviso por comercio | R-13 | — | No hay task |
 | Campaña y aviso de las 08:00 en Cloud Run | R-14, R-16 | W-01, W-04, T-07 | Prueba manual del corte |
 | Rechazo sin clave | R-15 | W-05, T-07 | Test del server y del trigger |
 | Sin duplicar en la convivencia | R-17 | W-04 | Prueba manual con N filas |
@@ -138,6 +154,10 @@ FROM "SubscriptionReminder"
 ORDER BY "createdAt" DESC
 LIMIT 20;
 
+SELECT count(*) AS queued
+FROM "SubscriptionReminder"
+WHERE status = 'QUEUED_WHATSAPP';
+
 SELECT "templateName", status, "errorLog", "createdAt"
 FROM "WhatsappQueue"
 WHERE origin = 'PLATFORM'
@@ -145,4 +165,4 @@ ORDER BY "createdAt" DESC
 LIMIT 20;
 ```
 
-Lectura: sin esas migraciones, faltó aplicarlas. Tabla vacía de avisos: interruptor apagado o no era día de aviso. `FAILED`: el `errorLog` dice si fue plantilla o worker. Esto no se automatiza.
+Lectura: sin esas migraciones, faltó aplicarlas. Tabla vacía de avisos: interruptor apagado o no era día de aviso. `FAILED`: el `errorLog` dice si fue plantilla o worker. Si `queued` es mayor que 0, antes de desplegar T-05 a producción el humano cierra esas filas como `NOT_DELIVERED` o anota en `decisions.md` que acepta el SMS de respaldo. Lab no espera esa consulta. Esto no se automatiza.

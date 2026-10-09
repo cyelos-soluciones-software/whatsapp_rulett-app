@@ -1,4 +1,6 @@
-SDD: 17tnjrabmxn · v2 · 2026-10-08
+SDD: 17tnjrabmxn · v8 · 2026-10-09
+
+v8 no agrega tasks en este repo. La plantilla de 1 día la encola rulett-app; este worker manda el nombre que ya viene en la fila.
 
 # Tasks — whatsapp_rulett-app
 

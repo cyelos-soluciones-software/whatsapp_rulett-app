@@ -1,6 +1,6 @@
 # ADR-054-1 — Gemini 3.1 se elige por variable y producción usa la región global
 
-SDD: 17tnjrabmxn · v2 · 2026-10-08
+SDD: 17tnjrabmxn · v8 · 2026-10-09
 Estado: pendiente de aprobación
 
 ## Contexto
@@ -20,31 +20,22 @@ Cupones, SMS y los cupones iniciales del alta usan `gemini-2.5-flash-lite`. [rep
 
 Sin `global` en Vercel, la IA de producción falla con 404. T-01 puede frenar el deploy si el JSON no cierra.
 
-# ADR-054-2 — El aviso forzado no ocupa el candado del cron
+# ADR-054-2 — Descartado: partir la clave única del aviso
 
-SDD: 17tnjrabmxn · v2 · 2026-10-08
-Estado: pendiente de aprobación
+SDD: 17tnjrabmxn · v8 · 2026-10-09
+Estado: descartado [humano, 2026-10-09]
 
-## Contexto
+## Decisión vigente
 
-`SubscriptionReminder` tiene un único `(tenantId, kind, expiresOn)`. [repo: rulett-app/prisma/schema.prisma] Sirve para que el cron no duplique y también impide el reenvío que pidió el analista.
+No hay `forcedByUserId` ni índice parcial. El botón reutiliza `enqueueSubscriptionReminders` y la clave única `(tenantId, kind, expiresOn)`. Un segundo clic, o el cron de las 08:00 el mismo día, no manda otro mensaje. El interruptor solo frena ese cron. `reconcileSubscriptionRemindersSafely` reconcilia aunque el interruptor esté apagado.
 
-## Decisión
+## Alternativa descartada
 
-`forcedByUserId` nullable. El único pasa a ser parcial, solo donde esa columna es null. El botón no consulta `SUBSCRIPTION_REMINDERS_ENABLED`. Dos pulsaciones del mismo tipo en menos de 2 minutos, con la fila aún en cola, son un solo envío.
-
-## Alternativas
-
-- Borrar la fila anterior y crear otra. Pierde el historial.
-- Un tipo de aviso nuevo. Obligaría a otra plantilla en Meta.
-
-## Consecuencias
-
-La migración la aplica el humano en lab y producción. El cron de la mañana sigue siendo idempotente.
+Partir el único con `forcedByUserId` para reenviar fuera de la ventana y elegir la plantilla. El analista no lo necesita para este corte: en lab ajusta `expiresAt` de un comercio de prueba.
 
 # ADR-054-3 — Cloud Run procesa el lote antes de responder, y solo lo invoca una cuenta de servicio
 
-SDD: 17tnjrabmxn · v4 · 2026-10-08
+SDD: 17tnjrabmxn · v8 · 2026-10-09
 Estado: aprobado [humano, 2026-10-08]
 
 ## Contexto
