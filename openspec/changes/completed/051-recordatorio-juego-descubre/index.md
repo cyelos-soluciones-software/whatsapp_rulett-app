@@ -2,7 +2,7 @@ SDD: 17tnjra85qn · v11 · 2026-10-01
 
 # Índice — 17tnjra85qn
 
-Ubicación: `openspec/changes/active/051-recordatorio-juego-descubre/`. [humano, 2026-10-01] Esta es la memoria de la historia. Sigue en `active` porque el delta todavía no se fusionó en `openspec/specs/` y siguen pendientes las migraciones en lab y producción, W-04 y el flag.
+Ubicación: `openspec/changes/completed/051-recordatorio-juego-descubre/` (estuvo en `active/` hasta el 2026-10-10). Esta es la memoria de la historia. Cerrada el 2026-10-10: todo está en producción [humano, 2026-10-10]. Ver `closure.md`. El 054 cambió después parte del aviso (ver «Cambios posteriores»).
 
 estado: cerrado [humano, 2026-10-01]. Código v11 reconciliado en local. T-01 a T-17 y W-00 a W-03 están hechas. SonarCloud: quality gate en verde, con 1 issue nuevo que no tumba el gate. Fuera de este cierre: las dos migraciones en lab y producción, W-04 en Render, el flag apagado, y `engines.node` del worker todavía en `>=20.0.0` hasta el merge. Laboratorio en `lab.rulett.app`: corrida cerrada, veredicto Incompleto. El envío al teléfono queda fuera.
 

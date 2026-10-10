@@ -2,9 +2,9 @@ SDD: 17tnjrabmxn · v8 · 2026-10-09
 
 # Índice — 17tnjrabmxn
 
-estado: v6 pendiente de que el implementador arranque. El delta de la revisión del 2026-10-09 quedó incorporado.
+estado: cerrado el 2026-10-10. Todo el cambio está en producción [humano, 2026-10-10]. Ver `closure.md`.
 
-Ubicación: `openspec/changes/active/054-gemini-aviso-cloud-run/`. [humano, 2026-10-08]
+Ubicación: `openspec/changes/completed/054-gemini-aviso-cloud-run/` (estuvo en `active/` hasta el 2026-10-10). [humano, 2026-10-08]
 
 v2. Superado por v5 en lo del botón. El esquema con `forcedByUserId` no se construye.
 
@@ -52,8 +52,8 @@ La fase de IA no espera al resto. Fecha dura: producción antes del 16/10/2026.
 ## Documentos consultados
 
 - [proyecto: historias/gemini-31-aviso-renovacion-cloud-run/historia.md]
-- [repo: rulett-app/docs/sdd/17tnjra85qn/index.md]
-- [repo: rulett-app/docs/sdd/_base/architecture.md]
+- [repo: rulett-app/openspec/changes/completed/051-recordatorio-juego-descubre/index.md]
+- [repo: rulett-app/openspec/specs/boundaries.md]
 - [repo: rulett-app/docs/ENV.md]
 - [repo: rulett-app/prisma/schema.prisma]
 - [repo: rulett-app/src/lib/vertex-ai.ts]

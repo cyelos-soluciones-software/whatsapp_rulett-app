@@ -176,7 +176,7 @@ Detalle: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
 - `GET /health` para Render/Railway.
 - Claim optimista `FOR UPDATE SKIP LOCKED` y envío Meta Graph API v25.0 con `components` + `parameter_name`.
 - Plantillas de comercio (header `nombre_tenant` + body): `recordatorio_cupon_vencer`, `cumpleanos_regalo_tenant`, `invitacion_evento_exclusivo`, `promocion_relampago` (`es_CO`).
-- Avisos de suscripción (solo body, `origin = PLATFORM`, `qrCampaignId` null): `recordatorio_suscripcion_7d`, `recordatorio_suscripcion_hoy` — SDD `docs/sdd/17tnjra85qn/`. `parseTemplateParams` valida por plantilla.
+- Avisos de suscripción (solo body, `origin = PLATFORM`, `qrCampaignId` null): `recordatorio_suscripcion_7d`, `recordatorio_suscripcion_hoy` — SDD `openspec/changes/completed/051-recordatorio-juego-descubre/` (el aviso de 1 día usa `recordatorio_suscripcion_7d` con `dias` `"1"`; `recordatorio_suscripcion_hoy` ya no se encola, 054). `parseTemplateParams` valida por plantilla.
 - Logs: `userPhone` enmascarado (últimos 4 dígitos).
 - Compatible con schema Prisma (`Tenant`, `QrCampaign`, `WhatsappQueue`).
 - Límite mensual por tenant se aplica en **rulett-app** al encolar; el worker solo procesa lo que hay en cola.

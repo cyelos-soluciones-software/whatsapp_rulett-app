@@ -10,10 +10,9 @@
 | `WHATSAPP_TOKEN` | Bearer Meta |
 | `WHATSAPP_PHONE_ID` | ID número WhatsApp |
 | `WHATSAPP_ACCOUNT_ID` | Logging |
-| `POLL_INTERVAL_MS` | Intervalo polling (default 60000) |
-| `WORKER_API_KEY` | Auth trigger (prod obligatorio) |
+| `WORKER_API_KEY` | Auth trigger, único secreto de aplicación (prod obligatorio) |
 
-Opcionales: `BATCH_SIZE`, `WHATSAPP_LANGUAGE_CODE`, `DATABASE_SSL`.
+Desde 054 no hay sondeo (`POLL_INTERVAL_MS` y `EDGE_SHARED_SECRET` ya no se usan). Opcionales: `BATCH_SIZE`, `WHATSAPP_LANGUAGE_CODE`, `DATABASE_SSL`.
 
 Ver `.env.example`.
 

@@ -36,10 +36,10 @@ Insertado por **rulett-app**. Worker valida y mapea:
 | `cumpleanos_regalo_tenant` | header: `nombre_tenant`; body: `nombre_usuario`, `mes_cumpleanos`, `regalo_usuario` |
 | `invitacion_evento_exclusivo` | header: `nombre_tenant`; body: `nombre_usuario`, `nombre_tenant`, `nombre_evento`, `fecha_evento` |
 | `promocion_relampago` | header: `nombre_tenant`; body: `nombre_tenant`, `nombre_usuario`, `fecha_limite`, `descuento_promo`, `producto_servicio` |
-| `recordatorio_suscripcion_7d` | sin header; body: `nombre_comercio`, `dias` (texto `"7"`) |
-| `recordatorio_suscripcion_hoy` | sin header; body: `nombre_comercio` |
+| `recordatorio_suscripcion_7d` | sin header; body: `nombre_comercio`, `dias` (texto `"7"` o `"1"` desde 054) |
+| `recordatorio_suscripcion_hoy` | sin header; body: `nombre_comercio` (ya no se encola desde 054) |
 
-La validación es por plantilla (`parseTemplateParams`): las de comercio exigen `nombre_tenant` y `nombre_usuario`; los avisos de suscripción no los traen. Params incompletos → `FAILED` sin llamar a Meta. La columna `origin` (`TENANT` | `PLATFORM`) la usa rulett-app; el worker no la lee. Contrato: [`docs/sdd/17tnjra85qn/`](../../docs/sdd/17tnjra85qn/design.md).
+La validación es por plantilla (`parseTemplateParams`): las de comercio exigen `nombre_tenant` y `nombre_usuario`; los avisos de suscripción no los traen. Params incompletos → `FAILED` sin llamar a Meta. La columna `origin` (`TENANT` | `PLATFORM`) la usa rulett-app; el worker no la lee. Contrato: [051](../changes/completed/051-recordatorio-juego-descubre/closure.md) y [054](../changes/completed/054-gemini-aviso-cloud-run/closure.md).
 
 Mapeo en `src/services/whatsapp.ts` con `parameter_name` (Graph API v25.0). Tras cambios: redeploy Render. Cambio: [005](../changes/completed/005-invitacion-evento-whatsapp/closure.md).
 
