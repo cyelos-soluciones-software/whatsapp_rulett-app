@@ -1,10 +1,7 @@
 # Cambios activos
 
-| ID | Estado |
-|----|--------|
-| [051-recordatorio-juego-descubre](./051-recordatorio-juego-descubre/) | Activo. Mismo número que en rulett-app. El delta del worker todavía no se fusionó en `specs/`. W-04 sigue pendiente. |
-| [054-gemini-aviso-cloud-run](./054-gemini-aviso-cloud-run/) | Activo. Mismo número que en rulett-app. ClickUp `17tnjrabmxn`. Gemini 3.1, aviso forzado y paso a Cloud Run. |
+Ninguno. 051 y 054 se cerraron el 2026-10-10 (en producción). Próximo número libre: `056`.
 
-**Completados recientes:** [001-openspec-foundation](../completed/001-openspec-foundation/) (fundación SDD), [005-invitacion-evento-whatsapp](../completed/005-invitacion-evento-whatsapp/) (deploy Render pendiente E2E invitación).
+**Completados recientes:** [051-recordatorio-juego-descubre](../completed/051-recordatorio-juego-descubre/) (aviso de suscripción, juego y Descubre; cerrado el 2026-10-10), [054-gemini-aviso-cloud-run](../completed/054-gemini-aviso-cloud-run/) (worker en Cloud Run, sin sondeo; cerrado el 2026-10-10), [001-openspec-foundation](../completed/001-openspec-foundation/) (fundación SDD), [005-invitacion-evento-whatsapp](../completed/005-invitacion-evento-whatsapp/) (deploy Render pendiente E2E invitación).
 
 Canónico de cambios cerrados: [completed/](../completed/).
