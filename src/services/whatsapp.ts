@@ -1,7 +1,12 @@
 import type { Config } from '../config.js';
-import { SUBSCRIPTION_REMINDER_7D_TEMPLATE } from '../types.js';
+import {
+  isV2Template,
+  SUBSCRIPTION_REMINDER_7D_TEMPLATE,
+  V2_TEMPLATE_BODY_PARAMS,
+} from '../types.js';
 import type {
   SubscriptionReminderTemplateParams,
+  TenantTemplateParams,
   WhatsappQueueRow,
   WhatsappSendResult,
   WhatsappTemplateParams,
@@ -29,10 +34,25 @@ type TemplateTextParameter = {
   text: string;
 };
 
-type TemplateComponent = {
-  type: 'header' | 'body';
-  parameters: TemplateTextParameter[];
+/** Parámetro del botón URL dinámico: posicional salvo que Meta lo registre con nombre. */
+type TemplateButtonParameter = {
+  type: 'text';
+  parameter_name?: string;
+  text: string;
 };
+
+type TemplateComponent =
+  | { type: 'header' | 'body'; parameters: TemplateTextParameter[] }
+  | {
+      type: 'button';
+      sub_type: 'url';
+      index: string;
+      parameters: TemplateButtonParameter[];
+    };
+
+export type ButtonOptions = { index: string; paramName?: string };
+
+const DEFAULT_BUTTON_OPTIONS: ButtonOptions = { index: '1' };
 
 function textParam(parameterName: string, value: string): TemplateTextParameter {
   return {
@@ -53,12 +73,40 @@ function buildSubscriptionReminderComponents(
   return [{ type: 'body', parameters }];
 }
 
+function buildV2Components(
+  templateName: keyof typeof V2_TEMPLATE_BODY_PARAMS,
+  params: TenantTemplateParams,
+  button: ButtonOptions,
+): TemplateComponent[] {
+  const buttonParameter: TemplateButtonParameter = {
+    type: 'text',
+    text: params.boton_comercio ?? '',
+  };
+  if (button.paramName) buttonParameter.parameter_name = button.paramName;
+
+  return [
+    { type: 'header', parameters: [textParam('nombre_tenant', params.nombre_tenant)] },
+    {
+      type: 'body',
+      parameters: V2_TEMPLATE_BODY_PARAMS[templateName].map((name) =>
+        textParam(name, params[name] ?? ''),
+      ),
+    },
+    { type: 'button', sub_type: 'url', index: button.index, parameters: [buttonParameter] },
+  ];
+}
+
 function buildTemplateComponents(
   templateName: string,
   params: WhatsappTemplateParams,
+  button: ButtonOptions = DEFAULT_BUTTON_OPTIONS,
 ): TemplateComponent[] {
   if ('nombre_comercio' in params) {
     return buildSubscriptionReminderComponents(templateName, params);
+  }
+
+  if (isV2Template(templateName)) {
+    return buildV2Components(templateName, params, button);
   }
 
   const header: TemplateComponent = {
@@ -147,12 +195,17 @@ export class WhatsappClient {
   private readonly phoneId: string;
   private readonly accountId: string;
   private readonly defaultLanguageCode: string;
+  private readonly button: ButtonOptions;
 
   constructor(config: Config) {
     this.token = config.whatsappToken;
     this.phoneId = config.whatsappPhoneId;
     this.accountId = config.whatsappAccountId;
     this.defaultLanguageCode = config.whatsappLanguageCode;
+    this.button = {
+      index: config.whatsappV2ButtonIndex,
+      paramName: config.whatsappV2ButtonParamName,
+    };
   }
 
   private endpoint(): string {
@@ -172,7 +225,7 @@ export class WhatsappClient {
     const template: Record<string, unknown> = {
       name: row.templateName,
       language: { code: languageCode },
-      components: buildTemplateComponents(row.templateName, row.templateParams),
+      components: buildTemplateComponents(row.templateName, row.templateParams, this.button),
     };
 
     const body = {

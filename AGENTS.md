@@ -79,6 +79,8 @@ docs/                   # Documentación extendida (ver índice abajo)
 | `WHATSAPP_PHONE_ID` | Sí | — | ID del número WhatsApp |
 | `WHATSAPP_ACCOUNT_ID` | Sí | — | ID cuenta Meta (logging) |
 | `BATCH_SIZE` | No | `50` | Registros por lote |
+| `WHATSAPP_V2_BUTTON_INDEX` | No | `1` | Índice base 0 del botón «Información del comercio» en las plantillas v2 (056). Debe coincidir con el orden aprobado en Meta. Un valor que no sea entero ≥ 0 hace fallar el arranque |
+| `WHATSAPP_V2_BUTTON_PARAM_NAME` | No | sin definir | Si se define (p. ej. `boton_comercio`), el parámetro del botón v2 viaja con ese `parameter_name`; sin definir, va posicional. Cambiarla en Cloud Run crea una revisión nueva sin rebuild |
 | `WHATSAPP_LANGUAGE_CODE` | No | `es_CO` | Fallback si fila no tiene `languageCode` |
 | `WORKER_API_KEY` | Sí (prod) | — | Bearer para `/api/trigger` (mismo valor en Vercel) |
 | `PORT` | No | `8080` | Puerto HTTP (Render lo inyecta) |
@@ -176,7 +178,9 @@ Detalle: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
 - `GET /health` para Render/Railway.
 - Claim optimista `FOR UPDATE SKIP LOCKED` y envío Meta Graph API v25.0 con `components` + `parameter_name`.
 - Plantillas de comercio (header `nombre_tenant` + body): `recordatorio_cupon_vencer`, `cumpleanos_regalo_tenant`, `invitacion_evento_exclusivo`, `promocion_relampago` (`es_CO`).
+- Plantillas v2 (056): las mismas cuatro con sufijo `_v2` más el botón URL dinámico «Información del comercio» (`parameters: [{ type: "text", text: <tenantId> }]`, `index` = `WHATSAPP_V2_BUTTON_INDEX`). `nombre_tenant` va solo en el header; `boton_comercio` debe ser un UUID o la fila termina `FAILED` sin llamar a Meta. Despliega el worker **antes** de activar una v2 en rulett-app (`WHATSAPP_V2_TEMPLATES_APPROVED`). El worker ignora `trigger`, `reason`, `contactId` y el estado `CANCELLED`. Detalle: `openspec/specs/integrations.md`.
 - Avisos de suscripción (solo body, `origin = PLATFORM`, `qrCampaignId` null): `recordatorio_suscripcion_7d`, `recordatorio_suscripcion_hoy` — SDD `openspec/changes/completed/051-recordatorio-juego-descubre/` (el aviso de 1 día usa `recordatorio_suscripcion_7d` con `dias` `"1"`; `recordatorio_suscripcion_hoy` ya no se encola, 054). `parseTemplateParams` valida por plantilla.
+- Deuda conocida (056, D-10): varias secciones de este archivo describen el sondeo y Render, que el build de `cloud-run` ya no usa (ver `docs/DEPLOYMENT.md`). No se corrige en 056; solo se actualizó lo de plantillas.
 - Logs: `userPhone` enmascarado (últimos 4 dígitos).
 - Compatible con schema Prisma (`Tenant`, `QrCampaign`, `WhatsappQueue`).
 - Límite mensual por tenant se aplica en **rulett-app** al encolar; el worker solo procesa lo que hay en cola.

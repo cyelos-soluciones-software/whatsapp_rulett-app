@@ -26,6 +26,26 @@ Los dos `recordatorio_suscripcion_*` son el aviso de Rulett al contacto del come
 
 `parseTemplateParams` valida por plantilla: las cuatro de comercio y las desconocidas exigen `nombre_tenant` y `nombre_usuario`; los avisos exigen `nombre_comercio` (y `dias` en la de 7 días) como texto no vacío. Si falta, la fila queda `FAILED` con `templateParams vacío` sin llamar a Meta. Una plantilla desconocida con params válidos cae al header `nombre_tenant`.
 
+### Plantillas v2 con botón «Información del comercio» (056)
+
+Mismas cuatro plantillas de comercio más un botón URL dinámico a `https://rulett.app/c/{{1}}`. Solo el nombre decide qué se arma: un `templateName` que termina en `_v2` y está en `V2_TEMPLATE_BODY_PARAMS` (`src/types.ts`). Los nombres son un supuesto hasta cerrar T-00 en Meta; viven en esa constante.
+
+| `templateName` | header | body (orden) | botones que viajan |
+|----------------|--------|--------------|--------------------|
+| `recordatorio_cupones_vencer_v2` | `nombre_tenant` | `nombre_usuario`, `cantidad_cupones`, `cupon`, `fecha_vencimiento` | URL dinámica (`boton_comercio`) |
+| `cumpleanos_regalo_tenant_v2` | `nombre_tenant` | `nombre_usuario`, `mes_cumpleanos`, `regalo_usuario` | URL dinámica |
+| `invitacion_evento_exclusivo_v2` | `nombre_tenant` | `nombre_usuario`, `nombre_evento`, `fecha_evento` | URL dinámica |
+| `promocion_relampago_v2` | `nombre_tenant` | `nombre_usuario`, `fecha_limite`, `descuento_promo`, `producto_servicio` | URL dinámica |
+
+- **`nombre_tenant` solo en el header.** El cuerpo de las v2 no lo repite (a diferencia de las v1 de invitación y promoción); un parámetro de más o de menos da el error 132000.
+- **Botón:** `{ type: "button", sub_type: "url", index, parameters: [{ type: "text", text: <tenantId> }] }`. «Mira tus cupones» es URL estática en Meta y no viaja.
+  - `index` sale de `WHATSAPP_V2_BUTTON_INDEX` (default `"1"`; debe coincidir con el orden de botones aprobado en Meta).
+  - El parámetro va **posicional** salvo que `WHATSAPP_V2_BUTTON_PARAM_NAME` esté definida; entonces se manda también `parameter_name` con ese valor (p. ej. `boton_comercio`).
+- **Validación (`parseTemplateParams`):** en las v2 todas las variables del cuerpo y `nombre_tenant` son obligatorias y no vacías, y `boton_comercio` debe ser un UUID 8-4-4-4-12. Es lo único que se concatena a la URL del botón. Si falta algo, `templateParams` queda `null` y la fila termina `FAILED` con `templateParams vacío`, sin llamar a Meta. Las claves desconocidas se descartan. Las v1 siguen siendo permisivas.
+- **Orden de despliegue:** el worker se despliega antes de que rulett-app agregue algún nombre a `WHATSAPP_V2_TEMPLATES_APPROVED`; un worker anterior descartaría `boton_comercio` y Meta respondería 132000.
+- **Fixture de contrato:** `test/fixtures/v2-contract.ts` tiene el JSON exacto de cada v2 y los `components` esperados; se replica en rulett-app (T-14).
+- **Columnas que el worker ignora:** `trigger`, `reason` y `contactId` (056). `RETURNING_COLUMNS` es una lista explícita y el worker solo reclama `PENDING`, así que el estado `CANCELLED` (baja del cliente) nunca se procesa.
+
 ### Troubleshooting Meta
 
 | Código | HTTP | Causa | Acción |

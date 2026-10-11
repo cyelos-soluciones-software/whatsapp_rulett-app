@@ -10,6 +10,10 @@ export interface Config {
   whatsappPhoneId: string;
   whatsappAccountId: string;
   whatsappLanguageCode: string;
+  /** Posición del botón «Información del comercio» en las plantillas v2 (índice base 0, como texto). */
+  whatsappV2ButtonIndex: string;
+  /** Si está definido, el parámetro del botón se envía con este `parameter_name`; si no, va posicional. */
+  whatsappV2ButtonParamName?: string;
 }
 
 const PRISMA_ONLY_QUERY_PARAMS = [
@@ -40,6 +44,20 @@ function parsePositiveInt(name: string, fallback: number): number {
   }
 
   return parsed;
+}
+
+/** Entero ≥ 0 como texto. Un valor inválido hace fallar el arranque, igual que `BATCH_SIZE`. */
+function parseNonNegativeIntText(name: string, fallback: string): string {
+  const raw = process.env[name]?.trim();
+  if (!raw) {
+    return fallback;
+  }
+
+  if (!/^\d+$/.test(raw)) {
+    throw new Error(`${name} debe ser un entero mayor o igual a 0.`);
+  }
+
+  return String(Number.parseInt(raw, 10));
 }
 
 function parseBoolean(name: string, fallback: boolean): boolean {
@@ -112,5 +130,7 @@ export function loadConfig(): Config {
     whatsappPhoneId: requireEnv('WHATSAPP_PHONE_ID'),
     whatsappAccountId: requireEnv('WHATSAPP_ACCOUNT_ID'),
     whatsappLanguageCode: process.env.WHATSAPP_LANGUAGE_CODE?.trim() || 'es_CO',
+    whatsappV2ButtonIndex: parseNonNegativeIntText('WHATSAPP_V2_BUTTON_INDEX', '1'),
+    whatsappV2ButtonParamName: process.env.WHATSAPP_V2_BUTTON_PARAM_NAME?.trim() || undefined,
   };
 }

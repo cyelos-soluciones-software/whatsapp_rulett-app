@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { mapRow } from '../src/db/queue.js';
+import { CONTRACT_TENANT_ID, V2_CONTRACT } from './fixtures/v2-contract.js';
 
 const baseRow = {
   id: 'q-1',
@@ -78,5 +79,66 @@ describe('mapRow', () => {
     });
 
     assert.equal(row.templateParams, null);
+  });
+});
+
+describe('mapRow — plantillas v2', () => {
+  const v2Row = (templateParams: unknown, templateName = 'recordatorio_cupones_vencer_v2') => ({
+    ...baseRow,
+    qrCampaignId: 'c-1',
+    templateName,
+    templateParams,
+    languageCode: 'es_CO',
+  });
+
+  it('parsea cada fixture del contrato con todos sus params', () => {
+    for (const contract of V2_CONTRACT) {
+      const row = mapRow(v2Row(contract.templateParams, contract.templateName));
+      assert.deepEqual(row.templateParams, contract.templateParams, contract.templateName);
+    }
+  });
+
+  it('descarta las claves desconocidas y las de otras plantillas', () => {
+    const [contract] = V2_CONTRACT;
+    const row = mapRow(
+      v2Row({ ...contract.templateParams, extra: 'x', nombre_evento: 'otro' }, contract.templateName),
+    );
+
+    assert.deepEqual(row.templateParams, contract.templateParams);
+  });
+
+  it('boton_comercio ausente → params incompletos', () => {
+    const [contract] = V2_CONTRACT;
+    const { boton_comercio: _omit, ...rest } = contract.templateParams;
+    assert.equal(mapRow(v2Row(rest, contract.templateName)).templateParams, null);
+  });
+
+  it('boton_comercio inválido → params incompletos', () => {
+    const [contract] = V2_CONTRACT;
+    for (const invalid of ['', 'abc', 'g'.repeat(36), `${CONTRACT_TENANT_ID}?x=1`, null, 7]) {
+      const row = mapRow(v2Row({ ...contract.templateParams, boton_comercio: invalid }, contract.templateName));
+      assert.equal(row.templateParams, null, String(invalid));
+    }
+  });
+
+  it('una variable obligatoria vacía → params incompletos', () => {
+    for (const contract of V2_CONTRACT) {
+      for (const key of Object.keys(contract.templateParams)) {
+        const row = mapRow(v2Row({ ...contract.templateParams, [key]: '' }, contract.templateName));
+        assert.equal(row.templateParams, null, `${contract.templateName}.${key}`);
+      }
+    }
+  });
+
+  it('las v1 siguen siendo permisivas: un opcional ausente no invalida', () => {
+    const row = mapRow({
+      ...baseRow,
+      qrCampaignId: 'c-1',
+      templateName: 'recordatorio_cupon_vencer',
+      templateParams: { nombre_tenant: 'Café Central', nombre_usuario: 'Ana' },
+      languageCode: 'es_CO',
+    });
+
+    assert.deepEqual(row.templateParams?.nombre_usuario, 'Ana');
   });
 });
