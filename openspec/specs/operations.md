@@ -12,7 +12,7 @@
 | `WHATSAPP_ACCOUNT_ID` | Logging |
 | `WORKER_API_KEY` | Auth trigger, único secreto de aplicación (prod obligatorio) |
 
-Desde 054 no hay sondeo (`POLL_INTERVAL_MS` y `EDGE_SHARED_SECRET` ya no se usan). Opcionales: `BATCH_SIZE`, `WHATSAPP_LANGUAGE_CODE`, `DATABASE_SSL`.
+Desde 054 no hay sondeo (`POLL_INTERVAL_MS` y `EDGE_SHARED_SECRET` ya no se usan). Opcionales: `BATCH_SIZE`, `WHATSAPP_LANGUAGE_CODE`, `DATABASE_SSL` y, desde 056, `WHATSAPP_V2_BUTTON_INDEX` (índice base 0 del botón «Información del comercio» de las plantillas v2; default `1`; un valor que no sea entero ≥ 0 impide el arranque) y `WHATSAPP_V2_BUTTON_PARAM_NAME` (si se define, el parámetro del botón viaja con ese `parameter_name`; sin definir va posicional, que es lo aprobado en Meta). Cambiarlas en Cloud Run crea una revisión nueva, sin rebuild. Despliega el worker con las v2 antes de que rulett-app active una plantilla v2.
 
 Ver `.env.example`.
 

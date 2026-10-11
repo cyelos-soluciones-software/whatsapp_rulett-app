@@ -28,7 +28,7 @@ Los dos `recordatorio_suscripcion_*` son el aviso de Rulett al contacto del come
 
 ### Plantillas v2 con botón «Información del comercio» (056)
 
-Mismas cuatro plantillas de comercio más un botón URL dinámico a `https://rulett.app/c/{{1}}`. Solo el nombre decide qué se arma: un `templateName` que termina en `_v2` y está en `V2_TEMPLATE_BODY_PARAMS` (`src/types.ts`). Los nombres son un supuesto hasta cerrar T-00 en Meta; viven en esa constante.
+Mismas cuatro plantillas de comercio más un botón URL dinámico a `https://www.rulett.app/c/{{1}}`. Solo el nombre decide qué se arma: un `templateName` que termina en `_v2` y está en `V2_TEMPLATE_BODY_PARAMS` (`src/types.ts`). Las cuatro están aprobadas en Meta (categoría Marketing) con estos nombres; Meta registró la variable de la URL como posicional `{{1}}` y el botón dinámico es el segundo (índice 1), de modo que en producción `WHATSAPP_V2_BUTTON_INDEX` queda en su default y `WHATSAPP_V2_BUTTON_PARAM_NAME` sin definir.
 
 | `templateName` | header | body (orden) | botones que viajan |
 |----------------|--------|--------------|--------------------|
@@ -63,7 +63,7 @@ Mismas cuatro plantillas de comercio más un botón URL dinámico a `https://rul
 
 E2E coordinado: rulett-app `scripts/e2e-whatsapp-templates.ts` + trigger `POST /api/trigger`.
 
-Cambios: [002](../changes/completed/002-whatsapp-template-params/closure.md), [005](../changes/completed/005-invitacion-evento-whatsapp/closure.md).
+Cambios: [002](../changes/completed/002-whatsapp-template-params/closure.md), [005](../changes/completed/005-invitacion-evento-whatsapp/closure.md), [056](../changes/completed/056-envios-automaticos-mensajes/closure.md) (plantillas v2 y botón dinámico).
 
 ## rulett-app (trigger)
 

@@ -71,3 +71,14 @@ SDD: 17tnjra7awa · v4 · 2026-10-10
 
 ### Sigue abierto
 - Confirmar en SonarCloud que el PR #161 pasa el Quality Gate tras el cambio.
+
+## 2026-10-11 · Cierre (Oscar)
+
+### Aceptadas
+- Oscar probó y declara que todo funcionó; producción quedó aprovisionada. Se cierra el change en los dos repos con QA aprobado por declaración de Oscar. Claude no ejecutó `/pruebas-lab` (mismo patrón que 049, 051 y 054).
+- La versión final del SDD es la v4. El detalle del cierre está en `closure.md`.
+
+### Sigue abierto
+- Jurídica: horario de contacto y baja solo en la billetera.
+- Throughput del worker según el volumen real (operación de Oscar).
+- Deudas D-01…D-11 de design §10.
