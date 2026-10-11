@@ -60,3 +60,14 @@ SDD: 17tnjra7awa · v4 · 2026-10-10
 ### Sigue abierto
 - Envío de prueba desde Meta Manager por plantilla (W-04).
 - Activación: agregar los nombres v1 a `WHATSAPP_V2_TEMPLATES_APPROVED` solo cuando el worker (W-01…W-03) esté en Cloud Run y T-14 esté desplegado en ese entorno.
+
+## 2026-10-10 · Hallazgo SonarCloud en el PR #161 (S2068)
+
+### Aceptadas
+- `scripts/auto-messages-lab.ts` tenía la constante `ADMIN_PASSWORD = 'Lab056-Demo!'`, que Sonar marca como contraseña embebida (typescript:S2068). Se corrige el código, sin marcar el hallazgo como "Safe" ni excluir el archivo, igual que con el gate del PR #127.
+- Corrección: la contraseña del admin de prueba sale de `LAB056_ADMIN_PASSWORD`. Si no está definida, se genera aleatoria con `crypto.randomBytes` y se imprime una sola vez al hacer `seed`.
+- El script sigue siendo solo de laboratorio: se niega a correr fuera de localhost y no lo importa ningún código de producción. La corrección no afecta producción, el worker ni las pruebas existentes.
+- Se agrega como hotspot 6 en design §6.
+
+### Sigue abierto
+- Confirmar en SonarCloud que el PR #161 pasa el Quality Gate tras el cambio.

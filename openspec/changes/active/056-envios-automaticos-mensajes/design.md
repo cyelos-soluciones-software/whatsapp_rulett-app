@@ -455,6 +455,7 @@ Los manuales de WhatsApp usan la plantilla v2 cuando está aprobada y hay landin
 3. La autorización en `setMerchantMessagesEnabled` (T-07).
 4. El override `AUTO_MESSAGES_NOW` (T-13).
 5. El parseo de `boton_comercio` en el worker (W-01).
+6. `scripts/auto-messages-lab.ts`: nada de credenciales embebidas. La contraseña del admin de prueba viene de `LAB056_ADMIN_PASSWORD` o se genera con `crypto.randomBytes` (S2068, PR #161).
 
 ---
 
