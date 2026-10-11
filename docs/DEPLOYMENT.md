@@ -22,10 +22,14 @@ WHATSAPP_TOKEN=EAAxxxxx
 WHATSAPP_PHONE_ID=1064133880126015
 WHATSAPP_ACCOUNT_ID=868325479011642
 WHATSAPP_LANGUAGE_CODE=es_CO
+WHATSAPP_V2_BUTTON_INDEX=1
+# WHATSAPP_V2_BUTTON_PARAM_NAME=boton_comercio
 WORKER_API_KEY=secreto_largo_aleatorio
 PORT=8080
 NODE_ENV=production
 ```
+
+**Plantillas v2 (056):** `WHATSAPP_V2_BUTTON_INDEX` (default `1`; debe coincidir con el orden de botones aprobado en Meta; un valor que no sea entero ≥ 0 impide el arranque) y `WHATSAPP_V2_BUTTON_PARAM_NAME` (opcional; sin definir, el parámetro del botón va posicional). En Cloud Run se cambian con una revisión nueva, sin rebuild. Despliega esta versión del worker antes de activar una plantilla v2 en rulett-app.
 
 `PORT` lo asigna Render automáticamente en Web Service; no hace falta fijarlo manualmente.
 

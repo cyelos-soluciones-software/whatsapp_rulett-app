@@ -1,12 +1,16 @@
 import { Pool } from 'pg';
 import type { Config } from '../config.js';
 import {
+  isV2Template,
   SUBSCRIPTION_REMINDER_7D_TEMPLATE,
   SUBSCRIPTION_REMINDER_DUE_DAY_TEMPLATE,
+  V2_TEMPLATE_BODY_PARAMS,
 } from '../types.js';
 import type {
   QueueStatus,
   SubscriptionReminderTemplateParams,
+  TenantTemplateParams,
+  V2TemplateName,
   WhatsappTemplateParams,
   WhatsappQueueRow,
 } from '../types.js';
@@ -43,6 +47,33 @@ function parseSubscriptionReminderParams(
   return { nombre_comercio: o.nombre_comercio };
 }
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Plantillas v2: todas las variables del cuerpo, `nombre_tenant` y `boton_comercio` son obligatorias.
+ * `boton_comercio` debe ser un UUID: es lo único que se concatena a la URL del botón, así que no se
+ * acepta ningún otro valor. Si falta algo, los params quedan incompletos (`null`) y la fila termina
+ * en FAILED sin llamar a Meta. Las claves desconocidas se descartan.
+ */
+function parseV2Params(
+  templateName: V2TemplateName,
+  o: Record<string, unknown>,
+): TenantTemplateParams | null {
+  if (!nonEmptyString(o.nombre_tenant)) return null;
+  if (!nonEmptyString(o.boton_comercio) || !UUID_PATTERN.test(o.boton_comercio)) return null;
+
+  const parsed: Record<string, string> = {
+    nombre_tenant: o.nombre_tenant,
+    boton_comercio: o.boton_comercio,
+  };
+  for (const name of V2_TEMPLATE_BODY_PARAMS[templateName]) {
+    const value = o[name];
+    if (!nonEmptyString(value)) return null;
+    parsed[name] = value;
+  }
+  return parsed as TenantTemplateParams;
+}
+
 export function parseTemplateParams(
   raw: unknown,
   templateName: string,
@@ -62,6 +93,9 @@ export function parseTemplateParams(
     templateName === SUBSCRIPTION_REMINDER_DUE_DAY_TEMPLATE
   ) {
     return parseSubscriptionReminderParams(templateName, o);
+  }
+  if (isV2Template(templateName)) {
+    return parseV2Params(templateName, o);
   }
   if (typeof o.nombre_tenant !== 'string' || typeof o.nombre_usuario !== 'string') {
     return null;

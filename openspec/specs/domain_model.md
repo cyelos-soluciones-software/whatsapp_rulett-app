@@ -41,6 +41,8 @@ Insertado por **rulett-app**. Worker valida y mapea:
 
 La validación es por plantilla (`parseTemplateParams`): las de comercio exigen `nombre_tenant` y `nombre_usuario`; los avisos de suscripción no los traen. Params incompletos → `FAILED` sin llamar a Meta. La columna `origin` (`TENANT` | `PLATFORM`) la usa rulett-app; el worker no la lee. Contrato: [051](../changes/completed/051-recordatorio-juego-descubre/closure.md) y [054](../changes/completed/054-gemini-aviso-cloud-run/closure.md).
 
+**056 (plantillas v2):** `recordatorio_cupones_vencer_v2`, `cumpleanos_regalo_tenant_v2`, `invitacion_evento_exclusivo_v2` y `promocion_relampago_v2` exigen, no vacíos, `nombre_tenant`, las variables de su cuerpo (`recordatorio_...`: `nombre_usuario`, `cantidad_cupones`, `cupon`, `fecha_vencimiento`; `cumpleanos_...`: `nombre_usuario`, `mes_cumpleanos`, `regalo_usuario`; `invitacion_...`: `nombre_usuario`, `nombre_evento`, `fecha_evento`; `promocion_...`: `nombre_usuario`, `fecha_limite`, `descuento_promo`, `producto_servicio`) y `boton_comercio` (UUID del tenant, parámetro del botón URL). Detalle y mapeo en [`integrations.md`](./integrations.md). El worker no lee `trigger`, `reason` ni `contactId`, ni procesa el estado `CANCELLED`: solo reclama `PENDING`.
+
 Mapeo en `src/services/whatsapp.ts` con `parameter_name` (Graph API v25.0). Tras cambios: redeploy Render. Cambio: [005](../changes/completed/005-invitacion-evento-whatsapp/closure.md).
 
 ## Migraciones worker

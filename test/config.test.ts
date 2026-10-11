@@ -12,7 +12,7 @@ const BASE_ENV: Record<string, string> = {
   WHATSAPP_ACCOUNT_ID: '456',
 };
 
-const KEYS = [...Object.keys(BASE_ENV), 'BATCH_SIZE', 'PORT', 'DATABASE_SSL', 'EDGE_SHARED_SECRET'];
+const KEYS = [...Object.keys(BASE_ENV), 'BATCH_SIZE', 'PORT', 'DATABASE_SSL', 'EDGE_SHARED_SECRET', 'WHATSAPP_V2_BUTTON_INDEX', 'WHATSAPP_V2_BUTTON_PARAM_NAME'];
 let saved: Record<string, string | undefined>;
 
 beforeEach(() => {
@@ -76,5 +76,48 @@ describe('loadConfig — secreto de borde', () => {
     assert.equal(config.workerApiKey, 'test-key');
     assert.equal(config.httpPort, 8080);
     assert.equal(config.batchSize, 50);
+  });
+});
+
+describe('loadConfig — botón de las plantillas v2', () => {
+  it('por defecto el índice es "1" y el parameter_name queda sin definir', () => {
+    const config = loadConfig();
+
+    assert.equal(config.whatsappV2ButtonIndex, '1');
+    assert.equal(config.whatsappV2ButtonParamName, undefined);
+  });
+
+  it('WHATSAPP_V2_BUTTON_INDEX personalizado', () => {
+    process.env.WHATSAPP_V2_BUTTON_INDEX = '0';
+    assert.equal(loadConfig().whatsappV2ButtonIndex, '0');
+
+    process.env.WHATSAPP_V2_BUTTON_INDEX = ' 02 ';
+    assert.equal(loadConfig().whatsappV2ButtonIndex, '2');
+  });
+
+  it('WHATSAPP_V2_BUTTON_INDEX vacío usa el valor por defecto', () => {
+    process.env.WHATSAPP_V2_BUTTON_INDEX = '  ';
+    assert.equal(loadConfig().whatsappV2ButtonIndex, '1');
+  });
+
+  for (const invalid of ['-1', 'abc', '1.5', '1e1', LEAKED]) {
+    it(`WHATSAPP_V2_BUTTON_INDEX inválido (${invalid.slice(0, 12)}) hace fallar el arranque sin imprimir el valor`, () => {
+      process.env.WHATSAPP_V2_BUTTON_INDEX = invalid;
+
+      const message = errorMessage(loadConfig);
+
+      assert.match(message, /WHATSAPP_V2_BUTTON_INDEX debe ser un entero mayor o igual a 0/);
+      assert.ok(!message.includes('s3cr3t-pass'));
+    });
+  }
+
+  it('WHATSAPP_V2_BUTTON_PARAM_NAME definida se recorta y se expone', () => {
+    process.env.WHATSAPP_V2_BUTTON_PARAM_NAME = ' boton_comercio ';
+    assert.equal(loadConfig().whatsappV2ButtonParamName, 'boton_comercio');
+  });
+
+  it('WHATSAPP_V2_BUTTON_PARAM_NAME en blanco equivale a sin definir', () => {
+    process.env.WHATSAPP_V2_BUTTON_PARAM_NAME = '   ';
+    assert.equal(loadConfig().whatsappV2ButtonParamName, undefined);
   });
 });

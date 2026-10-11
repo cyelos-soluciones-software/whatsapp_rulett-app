@@ -4,6 +4,7 @@ import type { Config } from '../src/config.js';
 import { parseTemplateParams } from '../src/db/queue.js';
 import { WhatsappClient } from '../src/services/whatsapp.js';
 import type { WhatsappQueueRow } from '../src/types.js';
+import { CONTRACT_TENANT_ID, V2_CONTRACT } from './fixtures/v2-contract.js';
 
 const config: Config = {
   databaseUrl: 'postgresql://localhost/test',
@@ -15,6 +16,7 @@ const config: Config = {
   whatsappPhoneId: '123456',
   whatsappAccountId: 'acc-1',
   whatsappLanguageCode: 'es_CO',
+  whatsappV2ButtonIndex: '1',
 };
 
 const EMPTY_PARAMS_ERROR = 'templateParams vacío: no se puede enviar plantilla con variables';
@@ -323,5 +325,134 @@ describe('sendTemplateMessage — respuesta de Meta', () => {
     );
 
     assert.deepEqual(result, { ok: false, error: 'ECONNRESET' });
+  });
+});
+
+describe('sendTemplateMessage — plantillas v2 con botón (contrato 056)', () => {
+  for (const contract of V2_CONTRACT) {
+    it(`${contract.templateName}: header + body + botón con el tenantId`, async () => {
+      const client = new WhatsappClient(config);
+      const result = await client.sendTemplateMessage(
+        buildRow(contract.templateName, contract.templateParams),
+      );
+
+      assert.equal(result.ok, true);
+      assert.equal(fetchMock.mock.callCount(), 1);
+      assert.deepEqual(sentBody(), {
+        messaging_product: 'whatsapp',
+        to: '573001234567',
+        type: 'template',
+        template: {
+          name: contract.templateName,
+          language: { code: 'es_CO' },
+          components: contract.components,
+        },
+      });
+    });
+
+    it(`${contract.templateName}: el fixture sobrevive al viaje como texto JSON`, async () => {
+      const client = new WhatsappClient(config);
+      await client.sendTemplateMessage(
+        buildRow(contract.templateName, JSON.stringify(contract.templateParams)),
+      );
+
+      assert.deepEqual(sentComponents(), contract.components);
+    });
+  }
+
+  it('el botón no lleva parameter_name si WHATSAPP_V2_BUTTON_PARAM_NAME no está definida', async () => {
+    const [contract] = V2_CONTRACT;
+    const client = new WhatsappClient(config);
+    await client.sendTemplateMessage(buildRow(contract.templateName, contract.templateParams));
+
+    const buttonComponent = (sentComponents() as Array<Record<string, unknown>>)[2];
+    const [parameter] = buttonComponent.parameters as Array<Record<string, unknown>>;
+    assert.equal('parameter_name' in parameter, false);
+  });
+
+  it('con WHATSAPP_V2_BUTTON_PARAM_NAME el botón lleva parameter_name', async () => {
+    const [contract] = V2_CONTRACT;
+    const client = new WhatsappClient({ ...config, whatsappV2ButtonParamName: 'boton_comercio' });
+    await client.sendTemplateMessage(buildRow(contract.templateName, contract.templateParams));
+
+    assert.deepEqual((sentComponents() as unknown[])[2], {
+      type: 'button',
+      sub_type: 'url',
+      index: '1',
+      parameters: [{ type: 'text', parameter_name: 'boton_comercio', text: CONTRACT_TENANT_ID }],
+    });
+  });
+
+  it('WHATSAPP_V2_BUTTON_INDEX personalizado se manda como índice del botón', async () => {
+    const [contract] = V2_CONTRACT;
+    const client = new WhatsappClient({ ...config, whatsappV2ButtonIndex: '0' });
+    await client.sendTemplateMessage(buildRow(contract.templateName, contract.templateParams));
+
+    assert.equal(((sentComponents() as unknown[])[2] as { index: string }).index, '0');
+  });
+
+  it('las claves desconocidas no viajan a Meta', async () => {
+    const [contract] = V2_CONTRACT;
+    const client = new WhatsappClient(config);
+    await client.sendTemplateMessage(
+      buildRow(contract.templateName, { ...contract.templateParams, nombre_evento: 'otro', extra: 'x' }),
+    );
+
+    assert.deepEqual(sentComponents(), contract.components);
+  });
+
+  it('una plantilla v1 no lleva botón aunque la fila traiga boton_comercio', async () => {
+    const client = new WhatsappClient(config);
+    await client.sendTemplateMessage(
+      buildRow('recordatorio_cupon_vencer', { ...tenantParams, boton_comercio: CONTRACT_TENANT_ID }),
+    );
+
+    const components = sentComponents() as Array<{ type: string }>;
+    assert.deepEqual(
+      components.map((component) => component.type),
+      ['header', 'body'],
+    );
+  });
+});
+
+describe('sendTemplateMessage — v2 con params incompletos fallan sin llamar a Meta', () => {
+  const [recordatorio] = V2_CONTRACT;
+  const without = (key: string) => {
+    const copy: Record<string, string> = { ...recordatorio.templateParams };
+    delete copy[key];
+    return copy;
+  };
+  const cases: Array<[string, Record<string, unknown>]> = [
+    ['sin boton_comercio', without('boton_comercio')],
+    ['boton_comercio vacío', { ...recordatorio.templateParams, boton_comercio: '' }],
+    ['boton_comercio que no es UUID', { ...recordatorio.templateParams, boton_comercio: 'tenant-1' }],
+    ['boton_comercio con ruta', { ...recordatorio.templateParams, boton_comercio: `${CONTRACT_TENANT_ID}/../x` }],
+    ['boton_comercio con texto antes', { ...recordatorio.templateParams, boton_comercio: `x${CONTRACT_TENANT_ID}` }],
+    ['boton_comercio numérico', { ...recordatorio.templateParams, boton_comercio: 123 }],
+    ['sin cantidad_cupones', without('cantidad_cupones')],
+    ['cupon vacío', { ...recordatorio.templateParams, cupon: '  ' }],
+    ['sin nombre_tenant', without('nombre_tenant')],
+  ];
+
+  for (const [label, params] of cases) {
+    it(label, async () => {
+      const client = new WhatsappClient(config);
+      const result = await client.sendTemplateMessage(buildRow(recordatorio.templateName, params));
+
+      assert.deepEqual(result, { ok: false, error: EMPTY_PARAMS_ERROR });
+      assert.equal(fetchMock.mock.callCount(), 0);
+    });
+  }
+
+  it('el UUID en mayúsculas es válido', async () => {
+    const client = new WhatsappClient(config);
+    const result = await client.sendTemplateMessage(
+      buildRow(recordatorio.templateName, {
+        ...recordatorio.templateParams,
+        boton_comercio: CONTRACT_TENANT_ID.toUpperCase(),
+      }),
+    );
+
+    assert.equal(result.ok, true);
   });
 });
