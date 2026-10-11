@@ -20,7 +20,7 @@ SDD: 17tnjra7awa · v4 · 2026-10-10
 - **SDD aprobado** (v2).
 
 ### Sigue abierto
-- T-00: nombres finales, categoría y forma de la variable del botón de las plantillas v2 en Meta (guía en `meta-plantillas.md`).
+- ~~T-00: nombres finales, categoría y forma de la variable del botón~~ → resuelto (ver T-00 abajo).
 - Jurídica: horario de contacto y baja solo en la billetera.
 
 ## 2026-10-10 · Validación del plan de implementación de rulett-app
@@ -47,3 +47,16 @@ SDD: 17tnjra7awa · v4 · 2026-10-10
   - Envío de prueba desde Meta al aprobar cada plantilla.
 - Las 4 tasks del worker se hacen de corrido. El despliegue en Cloud Run es de Oscar y solo es requisito antes de activar v2.
 - Guía de Meta: el cuerpo de las v2 no lleva `{{nombre_tenant}}`, que va solo en el encabezado. Copiar el cuerpo de la v1 tal cual daría error 132000 en invitación y promoción.
+
+## 2026-10-10 · T-00 Plantillas Meta (Oscar)
+
+### Aceptadas
+- Las 4 plantillas v2 quedaron **aprobadas** en Meta, con nombres exactos: `recordatorio_cupones_vencer_v2`, `cumpleanos_regalo_tenant_v2`, `invitacion_evento_exclusivo_v2` y `promocion_relampago_v2`. No hay que cambiar constantes.
+- Categoría asignada: Marketing (las 4).
+- Variable del botón: posicional `{{1}}`. **No** se define `WHATSAPP_V2_BUTTON_PARAM_NAME`.
+- Orden de botones: «Mira tus cupones» (índice 0) e «Información del comercio» (índice 1). `WHATSAPP_V2_BUTTON_INDEX` se deja en su default `1`.
+- URL del botón dinámico: `https://www.rulett.app/c/{{1}}`.
+
+### Sigue abierto
+- Envío de prueba desde Meta Manager por plantilla (W-04).
+- Activación: agregar los nombres v1 a `WHATSAPP_V2_TEMPLATES_APPROVED` solo cuando el worker (W-01…W-03) esté en Cloud Run y T-14 esté desplegado en ese entorno.
