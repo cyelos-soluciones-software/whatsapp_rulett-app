@@ -2,8 +2,8 @@ SDD: 17tnjra7awa · v4 · 2026-10-10
 
 # 056 — Envíos automáticos de WhatsApp/SMS sin acosar al cliente
 
-Estado: **aprobado** [humano, 2026-10-10] — planes de rulett-app (v3) y del worker (v4) validados
-Ubicación: `openspec/changes/active/056-envios-automaticos-mensajes/`. La carpeta existe en `rulett-app` y en `whatsapp_rulett-app` con el mismo número.
+Estado: **cerrado** el 2026-10-11 — en producción según Oscar (ver `closure.md`)
+Ubicación: `openspec/changes/completed/056-envios-automaticos-mensajes/` (al moverse desde `active/`). La carpeta existe en `rulett-app` y en `whatsapp_rulett-app` con el mismo número.
 ClickUp: [Enviar solos los recordatorios de cupones y los saludos de cumpleaños, sin acosar al cliente](https://app.clickup.com/t/17tnjra7awa). Subtareas: `17tnjra7awb`…`17tnjra7awj`.
 Historia local: [repo-local: Rulett/historias/envios-automaticos-whatsapp-sms/historia.md]. Su intake, la maqueta `revision-funcional.html` (aprobada [humano, 2026-10-10]) e `intake.md` están en esta misma carpeta.
 

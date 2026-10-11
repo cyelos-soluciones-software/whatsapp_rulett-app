@@ -29,7 +29,7 @@ openspec/
 2. Proponer cambio en `changes/active/NNN-feature/` (5 documentos SDD). El número de un cambio que cruza repos es el de rulett-app.
 3. Tras deploy, fusionar delta en `specs/` y mover a `completed/`.
 
-La memoria del worker es esta carpeta `openspec/`. `docs/sdd/` no se usa. En curso: ninguno. Cerrados el 2026-10-10: [051-recordatorio-juego-descubre](./changes/completed/051-recordatorio-juego-descubre/) y [054-gemini-aviso-cloud-run](./changes/completed/054-gemini-aviso-cloud-run/).
+La memoria del worker es esta carpeta `openspec/`. `docs/sdd/` no se usa. En curso: ninguno. Cerrados el 2026-10-10: [051-recordatorio-juego-descubre](./changes/completed/051-recordatorio-juego-descubre/) y [054-gemini-aviso-cloud-run](./changes/completed/054-gemini-aviso-cloud-run/); el 2026-10-11, [056-envios-automaticos-mensajes](./changes/completed/056-envios-automaticos-mensajes/).
 
 ## Documentos legacy
 

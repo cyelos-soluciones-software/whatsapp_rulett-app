@@ -163,6 +163,7 @@ Detalle: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
 | [`openspec/specs/`](openspec/specs/system_architecture.md) | Arquitectura, dominio, integraciones |
 | [`openspec/changes/completed/002-whatsapp-template-params/`](openspec/changes/completed/002-whatsapp-template-params/) | Cerrado PDN 2026-06-18 |
 | [`openspec/changes/completed/005-invitacion-evento-whatsapp/`](openspec/changes/completed/005-invitacion-evento-whatsapp/) | Código 2026-06-19; deploy Render pendiente E2E invitación |
+| [`openspec/changes/completed/056-envios-automaticos-mensajes/`](openspec/changes/completed/056-envios-automaticos-mensajes/) | Cerrado 2026-10-11: plantillas v2 con botón dinámico |
 | [`openspec/changes/active/`](openspec/changes/active/) | SDD de features en curso |
 | [`README.md`](README.md) | Overview humano + quick start |
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Referencia extendida → OpenSpec |
