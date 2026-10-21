@@ -92,11 +92,11 @@ Copia `.env.example` a `.env` y configura:
 | Documento | Para quién |
 |---|---|
 | [**AGENTS.md**](AGENTS.md) | Agentes de IA (Cursor, Antigravity) — **leer primero** |
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Diseño del sistema |
-| [docs/DATABASE.md](docs/DATABASE.md) | Schema y estados de la cola |
-| [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) | Desarrollo local |
-| [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Render, Railway, Docker |
-| [docs/CONVENTIONS.md](docs/CONVENTIONS.md) | Estándares de código |
+| [openspec/runbooks/ARCHITECTURE.md](./openspec/runbooks/ARCHITECTURE.md) | Diseño del sistema |
+| [openspec/runbooks/DATABASE.md](./openspec/runbooks/DATABASE.md) | Schema y estados de la cola |
+| [openspec/runbooks/DEVELOPMENT.md](./openspec/runbooks/DEVELOPMENT.md) | Desarrollo local |
+| [openspec/runbooks/DEPLOYMENT.md](./openspec/runbooks/DEPLOYMENT.md) | Render, Railway, Docker |
+| [openspec/runbooks/CONVENTIONS.md](./openspec/runbooks/CONVENTIONS.md) | Estándares de código |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Guía de contribución |
 
 ## Docker

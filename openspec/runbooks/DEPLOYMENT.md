@@ -65,7 +65,7 @@ NODE_ENV=production
 
 ## Cloud Run
 
-Runbook completo (Artifact Registry, Secret Manager, servicio, corte a IAM y rollback): [`openspec/changes/active/054-gemini-aviso-cloud-run/design.md`](../openspec/changes/active/054-gemini-aviso-cloud-run/design.md), sección «Paso a paso — Cloud Run».
+Runbook completo (Artifact Registry, Secret Manager, servicio, corte a IAM y rollback): [`openspec/changes/active/054-gemini-aviso-cloud-run/design.md`](../changes/completed/054-gemini-aviso-cloud-run/design.md), sección «Paso a paso — Cloud Run».
 
 Este build (rama `cloud-run`) se comporta distinto del que corre en Render:
 

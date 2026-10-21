@@ -1,13 +1,19 @@
 # AGENTS.md — Guía para agentes de IA
 
-> **Propósito:** Reglas de implementación del worker. **Especificaciones canónicas:** [openspec/specs/](./openspec/specs/system_architecture.md). **Cambios:** [active/](./openspec/changes/active/) · [completed/](./openspec/changes/completed/) (últimos: `002-whatsapp-template-params`, `005-invitacion-evento-whatsapp`).
+> **Propósito:** reglas de implementación del worker. `CLAUDE.md` y `.cursor/rules/` apuntan aquí.
 
-## Lectura obligatoria (orden)
+## Dónde está la memoria (leer primero)
 
-1. [openspec/specs/system_architecture.md](./openspec/specs/system_architecture.md)
-2. [openspec/specs/domain_model.md](./openspec/specs/domain_model.md) — contrato `WhatsappQueue` / `templateParams`
-3. [openspec/changes/active/](./openspec/changes/active/) — SDD antes de codificar features nuevas
-4. App companion: `rulett-app/openspec/` (misma numeración de cambios)
+**Toda la memoria técnica del worker vive en [`openspec/`](./openspec/README.md).** No hay otra: `docs/` y `docs/sdd/` ya no existen (se consolidaron en `openspec/` el 2026-10-20).
+
+| Necesito… | Leo |
+|---|---|
+| Mapa, flujo SDD y convenciones | [openspec/README.md](./openspec/README.md) (las reglas completas del flujo están en `../rulett-app/openspec/README.md`) |
+| Qué está en curso y último cierre | [openspec/changes/active/README.md](./openspec/changes/active/README.md) — **único lugar del estado** |
+| Estado actual del worker | [openspec/specs/](./openspec/specs/) — `system_architecture.md` y `domain_model.md` (contrato `WhatsappQueue` / `templateParams`) |
+| El SDD de la feature en curso | `openspec/changes/active/NNN-slug/` — léelo completo **antes** de codificar |
+| Despliegue, BD, desarrollo local, convenciones | [openspec/runbooks/](./openspec/runbooks/) |
+| La app que encola | `../rulett-app/openspec/` — **el número de un cambio compartido lo asigna rulett-app** |
 
 ## Resumen ejecutivo
 
@@ -49,7 +55,7 @@ sql/
   schema.sql            # Migración idempotente de columnas del worker
   dev-bootstrap.sql     # Tenant/campaña demo para Docker aislado
   seed.sql              # Seed estático para Docker init
-docs/                   # Documentación extendida (ver índice abajo)
+openspec/               # Memoria: specs, cambios y runbooks (ver índice abajo)
 ```
 
 ## Flujo de datos (obligatorio entender)
@@ -96,7 +102,7 @@ Ver `.env.example`. **Nunca commitear `.env`.**
 - Columnas del worker / sync Prisma: `languageCode`, `errorLog`, `sentAt`, `templateParams` (JSONB).
 - **`templateParams`:** lo escribe rulett-app; este repo solo lo lee y envía a Meta. No recalcular variables aquí.
 - **No renombrar columnas** sin coordinar con el schema Prisma de la app principal.
-- Detalle completo: [`docs/DATABASE.md`](docs/DATABASE.md)
+- Detalle completo: [`openspec/runbooks/DATABASE.md`](./openspec/runbooks/DATABASE.md)
 
 ## Comandos esenciales
 
@@ -133,7 +139,7 @@ npm run db:setup     # Docker up + schema + seed
 - No expandir a API REST pública (solo `/api/trigger` y `/health` existentes).
 - No agregar ORM (Prisma) — el worker usa SQL directo con `pg`.
 - No commitear `.env`, tokens ni credenciales.
-- No cambiar nombres de tabla/columna sin actualizar `docs/DATABASE.md` y coordinar con Prisma.
+- No cambiar nombres de tabla/columna sin actualizar `openspec/runbooks/DATABASE.md` y coordinar con Prisma.
 - No procesar mensajes en paralelo sin revisar rate limits de Meta API.
 - No crear commits ni PRs a menos que el usuario lo pida explícitamente.
 
@@ -153,7 +159,7 @@ npm run db:setup     # Docker up + schema + seed
 - **Railway:** Web service con `PORT` expuesto
 - **Docker:** `Dockerfile` multi-stage, `EXPOSE 8080`
 
-Detalle: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
+Detalle: [`openspec/runbooks/DEPLOYMENT.md`](./openspec/runbooks/DEPLOYMENT.md)
 
 ## Documentación extendida
 
@@ -161,16 +167,14 @@ Detalle: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
 |---|---|
 | [`openspec/README.md`](openspec/README.md) | **OpenSpec SDD — fuente canónica** |
 | [`openspec/specs/`](openspec/specs/system_architecture.md) | Arquitectura, dominio, integraciones |
-| [`openspec/changes/completed/002-whatsapp-template-params/`](openspec/changes/completed/002-whatsapp-template-params/) | Cerrado PDN 2026-06-18 |
-| [`openspec/changes/completed/005-invitacion-evento-whatsapp/`](openspec/changes/completed/005-invitacion-evento-whatsapp/) | Código 2026-06-19; deploy Render pendiente E2E invitación |
-| [`openspec/changes/completed/056-envios-automaticos-mensajes/`](openspec/changes/completed/056-envios-automaticos-mensajes/) | Cerrado 2026-10-11: plantillas v2 con botón dinámico |
-| [`openspec/changes/active/`](openspec/changes/active/) | SDD de features en curso |
+| [`openspec/changes/active/README.md`](openspec/changes/active/README.md) | Estado: en curso y último cierre |
+| [`openspec/changes/completed/README.md`](openspec/changes/completed/README.md) | Historial de cambios cerrados |
 | [`README.md`](README.md) | Overview humano + quick start |
-| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Referencia extendida → OpenSpec |
-| [`docs/DATABASE.md`](docs/DATABASE.md) | Runbook SQL → OpenSpec domain_model |
-| [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) | Setup local, scripts, debugging |
-| [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) | Render, Railway, Docker |
-| [`docs/CONVENTIONS.md`](docs/CONVENTIONS.md) | Estándares de código TypeScript |
+| [`openspec/runbooks/ARCHITECTURE.md`](./openspec/runbooks/ARCHITECTURE.md) | Referencia extendida (puede describir Render/sondeo; manda `openspec/specs/`) |
+| [`openspec/runbooks/DATABASE.md`](./openspec/runbooks/DATABASE.md) | Runbook SQL → OpenSpec domain_model |
+| [`openspec/runbooks/DEVELOPMENT.md`](./openspec/runbooks/DEVELOPMENT.md) | Setup local, scripts, debugging |
+| [`openspec/runbooks/DEPLOYMENT.md`](./openspec/runbooks/DEPLOYMENT.md) | Render, Railway, Docker |
+| [`openspec/runbooks/CONVENTIONS.md`](./openspec/runbooks/CONVENTIONS.md) | Estándares de código TypeScript |
 | [`CONTRIBUTING.md`](CONTRIBUTING.md) | Flujo de contribución |
 
 ## Estado actual del proyecto
@@ -181,7 +185,7 @@ Detalle: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
 - Plantillas de comercio (header `nombre_tenant` + body): `recordatorio_cupon_vencer`, `cumpleanos_regalo_tenant`, `invitacion_evento_exclusivo`, `promocion_relampago` (`es_CO`).
 - Plantillas v2 (056): las mismas cuatro con sufijo `_v2` más el botón URL dinámico «Información del comercio» (`parameters: [{ type: "text", text: <tenantId> }]`, `index` = `WHATSAPP_V2_BUTTON_INDEX`). `nombre_tenant` va solo en el header; `boton_comercio` debe ser un UUID o la fila termina `FAILED` sin llamar a Meta. Despliega el worker **antes** de activar una v2 en rulett-app (`WHATSAPP_V2_TEMPLATES_APPROVED`). El worker ignora `trigger`, `reason`, `contactId` y el estado `CANCELLED`. Detalle: `openspec/specs/integrations.md`.
 - Avisos de suscripción (solo body, `origin = PLATFORM`, `qrCampaignId` null): `recordatorio_suscripcion_7d`, `recordatorio_suscripcion_hoy` — SDD `openspec/changes/completed/051-recordatorio-juego-descubre/` (el aviso de 1 día usa `recordatorio_suscripcion_7d` con `dias` `"1"`; `recordatorio_suscripcion_hoy` ya no se encola, 054). `parseTemplateParams` valida por plantilla.
-- Deuda conocida (056, D-10): varias secciones de este archivo describen el sondeo y Render, que el build de `cloud-run` ya no usa (ver `docs/DEPLOYMENT.md`). No se corrige en 056; solo se actualizó lo de plantillas.
+- Deuda conocida (056, D-10): varias secciones de este archivo describen el sondeo y Render, que el build de `cloud-run` ya no usa (ver `openspec/runbooks/DEPLOYMENT.md`). No se corrige en 056; solo se actualizó lo de plantillas.
 - Logs: `userPhone` enmascarado (últimos 4 dígitos).
 - Compatible con schema Prisma (`Tenant`, `QrCampaign`, `WhatsappQueue`).
 - Límite mensual por tenant se aplica en **rulett-app** al encolar; el worker solo procesa lo que hay en cola.

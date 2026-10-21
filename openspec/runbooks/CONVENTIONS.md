@@ -100,7 +100,7 @@ Campos recomendados en meta: `queueId`, `tenantId`, `userPhone`, `templateName`,
 Al agregar scripts:
 - Prefijo `db:` para operaciones de base de datos.
 - Usar `tsx` para scripts TypeScript en desarrollo.
-- Documentar en `docs/DEVELOPMENT.md` y `AGENTS.md`.
+- Documentar en `openspec/runbooks/DEVELOPMENT.md` y `AGENTS.md`.
 
 ## Testing (futuro)
 

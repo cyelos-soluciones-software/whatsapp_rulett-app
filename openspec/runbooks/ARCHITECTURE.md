@@ -1,6 +1,6 @@
 # Arquitectura
 
-> **Fuente canónica:** [../openspec/specs/system_architecture.md](../openspec/specs/system_architecture.md) y [integrations.md](../openspec/specs/integrations.md). Este archivo se mantiene como referencia extendida.
+> **Fuente canónica:** [../openspec/specs/system_architecture.md](../specs/system_architecture.md) y [integrations.md](../specs/integrations.md). Este archivo se mantiene como referencia extendida.
 
 ## Visión general
 
