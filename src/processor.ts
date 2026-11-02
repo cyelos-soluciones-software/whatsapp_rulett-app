@@ -1,5 +1,4 @@
 import type { QueueRepository } from './db/queue.js';
-import { maskPhone } from './lib/mask-phone.js';
 import type { WhatsappClient } from './services/whatsapp.js';
 import type { WhatsappQueueRow } from './types.js';
 
@@ -13,6 +12,10 @@ function log(level: 'info' | 'warn' | 'error', message: string, meta?: Record<st
   console.log(JSON.stringify(entry));
 }
 
+/**
+ * 068 W-05 (WD-3): los logs nunca llevan el nombre ni el teléfono del destinatario, para ninguna plantilla.
+ * Quedan el id de la fila, el comercio, la campaña, la plantilla, el estado y el código de Meta.
+ */
 async function processRow(
   row: WhatsappQueueRow,
   whatsapp: WhatsappClient,
@@ -22,8 +25,6 @@ async function processRow(
     queueId: row.id,
     tenantId: row.tenantId,
     campaignId: row.qrCampaignId,
-    userPhone: maskPhone(row.userPhone),
-    userName: row.userName,
     templateName: row.templateName,
   });
 
@@ -33,6 +34,8 @@ async function processRow(
     await queue.markSent(row.id);
     log('info', 'Mensaje enviado', {
       queueId: row.id,
+      templateName: row.templateName,
+      status: 'SENT',
       messageId: result.messageId,
       statusCode: result.statusCode,
     });
@@ -44,6 +47,8 @@ async function processRow(
 
   log('error', 'Fallo al enviar mensaje', {
     queueId: row.id,
+    templateName: row.templateName,
+    status: 'FAILED',
     statusCode: result.statusCode,
     error: errorLog,
   });

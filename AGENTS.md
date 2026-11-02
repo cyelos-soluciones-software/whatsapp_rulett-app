@@ -87,6 +87,8 @@ openspec/               # Memoria: specs, cambios y runbooks (ver índice abajo)
 | `BATCH_SIZE` | No | `50` | Registros por lote |
 | `WHATSAPP_V2_BUTTON_INDEX` | No | `1` | Índice base 0 del botón «Información del comercio» en las plantillas v2 (056). Debe coincidir con el orden aprobado en Meta. Un valor que no sea entero ≥ 0 hace fallar el arranque |
 | `WHATSAPP_V2_BUTTON_PARAM_NAME` | No | sin definir | Si se define (p. ej. `boton_comercio`), el parámetro del botón v2 viaja con ese `parameter_name`; sin definir, va posicional. Cambiarla en Cloud Run crea una revisión nueva sin rebuild |
+| `WHATSAPP_FEEDBACK_BUTTON_INDEX` | No | `0` | 068: índice base 0 del botón «Calificar» de `calificar_pedido`. Un valor que no sea entero ≥ 0 hace fallar el arranque |
+| `WHATSAPP_FEEDBACK_BUTTON_PARAM_NAME` | No | sin definir | 068: `parameter_name` del botón de calificación; sin definir, va posicional |
 | `WHATSAPP_LANGUAGE_CODE` | No | `es_CO` | Fallback si fila no tiene `languageCode` |
 | `WORKER_API_KEY` | Sí (prod) | — | Bearer para `/api/trigger` (mismo valor en Vercel) |
 | `PORT` | No | `8080` | Puerto HTTP (Render lo inyecta) |
@@ -186,7 +188,8 @@ Detalle: [`openspec/runbooks/DEPLOYMENT.md`](./openspec/runbooks/DEPLOYMENT.md)
 - Plantillas v2 (056): las mismas cuatro con sufijo `_v2` más el botón URL dinámico «Información del comercio» (`parameters: [{ type: "text", text: <tenantId> }]`, `index` = `WHATSAPP_V2_BUTTON_INDEX`). `nombre_tenant` va solo en el header; `boton_comercio` debe ser un UUID o la fila termina `FAILED` sin llamar a Meta. Despliega el worker **antes** de activar una v2 en rulett-app (`WHATSAPP_V2_TEMPLATES_APPROVED`). El worker ignora `trigger`, `reason`, `contactId` y el estado `CANCELLED`. Detalle: `openspec/specs/integrations.md`.
 - Avisos de suscripción (solo body, `origin = PLATFORM`, `qrCampaignId` null): `recordatorio_suscripcion_7d`, `recordatorio_suscripcion_hoy` — SDD `openspec/changes/completed/051-recordatorio-juego-descubre/` (el aviso de 1 día usa `recordatorio_suscripcion_7d` con `dias` `"1"`; `recordatorio_suscripcion_hoy` ya no se encola, 054). `parseTemplateParams` valida por plantilla.
 - Deuda conocida (056, D-10): varias secciones de este archivo describen el sondeo y Render, que el build de `cloud-run` ya no usa (ver `openspec/runbooks/DEPLOYMENT.md`). No se corrige en 056; solo se actualizó lo de plantillas.
-- Logs: `userPhone` enmascarado (últimos 4 dígitos).
+- Calificación del pedido (068): `calificar_pedido` (header `nombre_tenant`; body `nombre_usuario`, `numero_pedido`, `nombre_sede`, `fecha_pedido`; botón URL dinámico con `boton_calificacion`, token de 38 caracteres). Rama propia por nombre exacto en `parseTemplateParams` y `buildTemplateComponents`, aparte de las v2. Detalle: `openspec/specs/integrations.md`.
+- Logs sin nombre ni teléfono del destinatario (068 W-05): solo id de fila, comercio, campaña, plantilla, estado y código de Meta.
 - Compatible con schema Prisma (`Tenant`, `QrCampaign`, `WhatsappQueue`).
 - Límite mensual por tenant se aplica en **rulett-app** al encolar; el worker solo procesa lo que hay en cola.
 - Docker Compose PostgreSQL local :5440; scripts seed/schema/inspect.

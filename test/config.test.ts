@@ -12,7 +12,7 @@ const BASE_ENV: Record<string, string> = {
   WHATSAPP_ACCOUNT_ID: '456',
 };
 
-const KEYS = [...Object.keys(BASE_ENV), 'BATCH_SIZE', 'PORT', 'DATABASE_SSL', 'EDGE_SHARED_SECRET', 'WHATSAPP_V2_BUTTON_INDEX', 'WHATSAPP_V2_BUTTON_PARAM_NAME'];
+const KEYS = [...Object.keys(BASE_ENV), 'BATCH_SIZE', 'PORT', 'DATABASE_SSL', 'EDGE_SHARED_SECRET', 'WHATSAPP_V2_BUTTON_INDEX', 'WHATSAPP_V2_BUTTON_PARAM_NAME', 'WHATSAPP_FEEDBACK_BUTTON_INDEX', 'WHATSAPP_FEEDBACK_BUTTON_PARAM_NAME'];
 let saved: Record<string, string | undefined>;
 
 beforeEach(() => {
@@ -121,3 +121,44 @@ describe('loadConfig — botón de las plantillas v2', () => {
     assert.equal(loadConfig().whatsappV2ButtonParamName, undefined);
   });
 });
+
+describe('loadConfig — botón de calificar_pedido (068 W-02)', () => {
+  it('por defecto el índice es "0" y el parameter_name queda sin definir', () => {
+    const config = loadConfig();
+
+    assert.equal(config.whatsappFeedbackButtonIndex, '0');
+    assert.equal(config.whatsappFeedbackButtonParamName, undefined);
+  });
+
+  it('valores propios, independientes de los de la v2', () => {
+    process.env.WHATSAPP_FEEDBACK_BUTTON_INDEX = ' 01 ';
+    process.env.WHATSAPP_FEEDBACK_BUTTON_PARAM_NAME = ' boton_calificacion ';
+    const config = loadConfig();
+
+    assert.equal(config.whatsappFeedbackButtonIndex, '1');
+    assert.equal(config.whatsappFeedbackButtonParamName, 'boton_calificacion');
+    assert.equal(config.whatsappV2ButtonIndex, '1');
+    assert.equal(config.whatsappV2ButtonParamName, undefined);
+  });
+
+  it('en blanco equivale al valor por defecto', () => {
+    process.env.WHATSAPP_FEEDBACK_BUTTON_INDEX = '  ';
+    process.env.WHATSAPP_FEEDBACK_BUTTON_PARAM_NAME = '  ';
+    const config = loadConfig();
+
+    assert.equal(config.whatsappFeedbackButtonIndex, '0');
+    assert.equal(config.whatsappFeedbackButtonParamName, undefined);
+  });
+
+  for (const invalid of ['-1', 'abc', '0.5', LEAKED]) {
+    it(`WHATSAPP_FEEDBACK_BUTTON_INDEX inválido (${invalid.slice(0, 12)}) hace fallar el arranque sin imprimir el valor`, () => {
+      process.env.WHATSAPP_FEEDBACK_BUTTON_INDEX = invalid;
+
+      const message = errorMessage(loadConfig);
+
+      assert.match(message, /WHATSAPP_FEEDBACK_BUTTON_INDEX debe ser un entero mayor o igual a 0/);
+      assert.ok(!message.includes('s3cr3t-pass'));
+    });
+  }
+});
+

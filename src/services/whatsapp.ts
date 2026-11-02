@@ -1,10 +1,13 @@
 import type { Config } from '../config.js';
 import {
+  FEEDBACK_BODY_PARAMS,
+  isFeedbackParams,
   isV2Template,
   SUBSCRIPTION_REMINDER_7D_TEMPLATE,
   V2_TEMPLATE_BODY_PARAMS,
 } from '../types.js';
 import type {
+  FeedbackTemplateParams,
   SubscriptionReminderTemplateParams,
   TenantTemplateParams,
   WhatsappQueueRow,
@@ -53,6 +56,8 @@ type TemplateComponent =
 export type ButtonOptions = { index: string; paramName?: string };
 
 const DEFAULT_BUTTON_OPTIONS: ButtonOptions = { index: '1' };
+/** 068: `calificar_pedido` tiene un solo botón, así que por defecto va en el índice 0. */
+const DEFAULT_FEEDBACK_BUTTON_OPTIONS: ButtonOptions = { index: '0' };
 
 function textParam(parameterName: string, value: string): TemplateTextParameter {
   return {
@@ -71,6 +76,21 @@ function buildSubscriptionReminderComponents(
     parameters.push(textParam('dias', params.dias ?? ''));
   }
   return [{ type: 'body', parameters }];
+}
+
+function urlButton(value: string, button: ButtonOptions): TemplateComponent {
+  const parameter: TemplateButtonParameter = { type: 'text', text: value };
+  if (button.paramName) parameter.parameter_name = button.paramName;
+  return { type: 'button', sub_type: 'url', index: button.index, parameters: [parameter] };
+}
+
+/** 068 (WD-4): encabezado `nombre_tenant`, cuerpo en orden y botón con el token del enlace. */
+function buildFeedbackComponents(params: FeedbackTemplateParams, button: ButtonOptions): TemplateComponent[] {
+  return [
+    { type: 'header', parameters: [textParam('nombre_tenant', params.nombre_tenant)] },
+    { type: 'body', parameters: FEEDBACK_BODY_PARAMS.map((name) => textParam(name, params[name])) },
+    urlButton(params.boton_calificacion, button),
+  ];
 }
 
 function buildV2Components(
@@ -100,9 +120,16 @@ function buildTemplateComponents(
   templateName: string,
   params: WhatsappTemplateParams,
   button: ButtonOptions = DEFAULT_BUTTON_OPTIONS,
+  feedbackButton: ButtonOptions = DEFAULT_FEEDBACK_BUTTON_OPTIONS,
 ): TemplateComponent[] {
   if ('nombre_comercio' in params) {
     return buildSubscriptionReminderComponents(templateName, params);
+  }
+
+  // 068 (WD-4): `parseTemplateParams` solo produce estos params para `calificar_pedido` (por nombre
+  // exacto, antes de la v2), así que la forma basta aquí y la rama v2 no cambia.
+  if (isFeedbackParams(params)) {
+    return buildFeedbackComponents(params, feedbackButton);
   }
 
   if (isV2Template(templateName)) {
@@ -196,6 +223,7 @@ export class WhatsappClient {
   private readonly accountId: string;
   private readonly defaultLanguageCode: string;
   private readonly button: ButtonOptions;
+  private readonly feedbackButton: ButtonOptions;
 
   constructor(config: Config) {
     this.token = config.whatsappToken;
@@ -205,6 +233,10 @@ export class WhatsappClient {
     this.button = {
       index: config.whatsappV2ButtonIndex,
       paramName: config.whatsappV2ButtonParamName,
+    };
+    this.feedbackButton = {
+      index: config.whatsappFeedbackButtonIndex,
+      paramName: config.whatsappFeedbackButtonParamName,
     };
   }
 
@@ -225,7 +257,7 @@ export class WhatsappClient {
     const template: Record<string, unknown> = {
       name: row.templateName,
       language: { code: languageCode },
-      components: buildTemplateComponents(row.templateName, row.templateParams, this.button),
+      components: buildTemplateComponents(row.templateName, row.templateParams, this.button, this.feedbackButton),
     };
 
     const body = {
