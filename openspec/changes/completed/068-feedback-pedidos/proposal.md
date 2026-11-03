@@ -1,4 +1,4 @@
-SDD: 17tnjrajf9b · v5 · 2026-11-02
+SDD: 17tnjrajf9b · v10 · 2026-11-02
 
 # Proposal — 068 Calificación de pedidos e informe de experiencia
 estado: aprobado [humano, 2026-11-01] · v2 agrega el alcance 12
@@ -37,6 +37,23 @@ Corresponde a la historia, Incluye 1–11.
     - informe con IA semanal (lunes 06:00) y a demanda (1 por día), cada uno a cargo de 1 prompt de `maxAiPromptsPerMonth`.
 11. El Resumen se reorganiza en 4 pestañas.
 12. **Home** [humano, 2026-11-01, v2]: un destacado nuevo en «Lo que más se nota» y una pregunta frecuente que explican la calificación de pedidos a los comercios. Los textos pasan por la compuerta G-0 y se publican junto con la funcionalidad en PDN (regla 058: la home solo promete lo que está en producción).
+13. **Envío manual (v6)** [humano, 2026-11-02]: en un pedido Finalizado, el administrador (cualquier sede) y el cajero (su sede) pueden pulsar «Enviar calificación».
+    - El botón adelanta el envío automático de esa solicitud: si sale manual, no sale automático.
+    - Aplica las mismas reglas del envío automático: billetera, baja, cupo, suscripción, interruptor, vigencia y franja de 08:00 a 21:00.
+    - Se envía una sola vez por pedido.
+    - En un pedido sin billetera, el botón explica que no se puede enviar y sugiere compartir el resumen por WhatsApp, que ya lleva el enlace.
+14. **Comensal sin billetera (v8)** [humano, 2026-11-02]:
+    - La autorización obligatoria del pedido del comensal pasa a «Autorizo a {comercio} y a CYELOS SOLUCIONES DE SOFTWARE S.A.S. a usar mis datos para gestionar este pedido y pedirme por WhatsApp o SMS que lo califique», versión `pedido-2026-11`.
+    - Los pedidos del comensal sin billetera creados con esa versión reciben el mensaje de calificación en el celular del pedido, con las mismas reglas: uno por pedido, cupo, baja y franja.
+    - Los pedidos del personal y los creados con la versión anterior siguen solo con enlace o QR.
+15. **Baja desde `/f` (v8):** quien abre el enlace puede dejar de recibir mensajes de ese comercio en el celular del pedido. Es el mecanismo de revocación para quien no tiene billetera.
+16. **`/f` con el diseño de la sede (v8):** colores (fondo, texto, botones, texto de botones), tipografías y logo de la landing de la sede del pedido, con los valores por defecto si no hay landing.
+17. **Ajustes del programa de vendedores (v10, H8)** [humano, 2026-11-02]:
+    - El texto de contraseña del registro del vendedor dice el mínimo real (12), tomado de la constante.
+    - `/registro?codigo=` con un código válido bloquea el campo «¿Te recomendó alguien?».
+    - Las comisiones se pagan en los **5** primeros días hábiles del mes siguiente, con contrato `vendedores-v3-2026-11` y nueva aceptación.
+    - Cada pago «Por liquidar» del portal dice en qué liquidación entra y cuándo se paga.
+    - Se cierra el reporte de QA: se demuestra con pruebas que el % del comercio vigente al aprobar es el que se liquida, y la ficha del vendedor aclara que su % por defecto solo aplica a comercios nuevos.
 
 ## No-alcance
 Corresponde a la historia, No incluye. Además, en lo técnico:
@@ -45,7 +62,7 @@ Corresponde a la historia, No incluye. Además, en lo técnico:
 - No hay reserva de cupo de IA compartida con cupones y SMS: esos siguen contando después del uso (ver design §Riesgos).
 
 ## Criterios de aceptación
-Son los 28 escenarios Gherkin de la historia, numerados CA-01…CA-28, más CA-29 (home, v2), en `specs.md` §Matriz de trazabilidad.
+Son los 28 escenarios Gherkin de la historia, numerados CA-01…CA-28, más CA-29 (home, v2) CA-30…CA-36 (envío manual, v6) y CA-37…CA-43 (v8), en `specs.md` §Matriz de trazabilidad.
 
 ## Usuarios y casos afectados
 - **TENANT_ADMIN:** interruptor en la sede, Resumen en pestañas, pestaña nueva e informe.

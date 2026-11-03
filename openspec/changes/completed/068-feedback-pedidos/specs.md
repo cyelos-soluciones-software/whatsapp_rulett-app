@@ -1,4 +1,4 @@
-SDD: 17tnjrajf9b · v5 · 2026-11-02
+SDD: 17tnjrajf9b · v10 · 2026-11-02
 
 # Specs — 068 Calificación de pedidos
 
@@ -107,6 +107,84 @@ En todos los estados válidos se muestran el comercio, la sede, #consecutivo, la
 - En 360 px se ven en una columna; en tablet, en dos; en escritorio, en cuatro (o 2×2 si la verificación de T-19 lo exige).
 - Lighthouse de la home sin regresión: SEO 100 y accesibilidad ≥ 95 (metas de 058/060).
 
+### 1.10 Envío manual (v6)
+| Caso | Resultado |
+|---|---|
+| Cajero o administrador, pedido FINALIZED con solicitud `SCHEDULED`, dentro de la franja | Se encola de inmediato por WA o SMS según el cupo; la solicitud queda `QUEUED_*` con `dispatchTrigger=MANUAL`; la fila de cola con `trigger=MANUAL`; el cron ya no la envía |
+| Igual, fuera de la franja | `dueAt=now`, `MANUAL`; mensaje «Se enviará a las 08:00»; la toma el cron de las 08:00 |
+| Solicitud ya `QUEUED_*`, `SENT_*`, `SKIPPED`, `NOT_DELIVERED` o respondida | No envía; responde `already` con el estado |
+| Solicitud `NOT_APPLICABLE` (sin billetera) | No envía; aviso «Este cliente no tiene billetera. Comparte el resumen por WhatsApp: ya lleva el enlace para calificar» |
+| Sin solicitud (sede apagada o pedido anterior a 068) | «Este pedido no tiene calificación disponible» |
+| Pedido no Finalizado | Sin bloque ni botón; la acción responde `not_finalized` |
+| Mesero | Ve el estado, no el botón; la acción responde «no autorizado» |
+| Cajero de otra sede o administrador de otro comercio | «Pedido no encontrado» |
+| Baja, sin cupo, sin teléfono, suscripción vencida, vencida | Misma omisión que el automático; el mensaje dice el motivo |
+| `ORDER_FEEDBACK_MESSAGES_ENABLED` apagado | Botón deshabilitado con «Los envíos de calificación están desactivados» |
+| Doble clic o carrera con el cron | Un solo envío; el segundo recibe `already` |
+
+### 1.11 Comensal sin billetera, baja y diseño de `/f` (v8)
+| Caso | Resultado |
+|---|---|
+| Pedido del comensal sin sesión con `pedido-2026-11`, finalizado, sede encendida | `SCHEDULED`, `ORDER_CONSENT`; a la hora sale WA/SMS al celular del pedido con su primer nombre |
+| Pedido del comensal con `pedido-2026-10` (antes del despliegue) | `NOT_APPLICABLE` |
+| Pedido del mesero o del administrador | `NOT_APPLICABLE` |
+| Celular del pedido no válido para msisdn | `SKIPPED/NO_PHONE` |
+| Celular con baja en el comercio | `SKIPPED/OPT_OUT` |
+| Envío manual (H6) de un pedido `ORDER_CONSENT` | Igual que con billetera |
+| La hoja del pedido muestra la autorización | Con el texto nuevo; el pedido guarda `pedido-2026-11` |
+| «No quiero recibir más mensajes de {comercio}» en `/f` | Baja del msisdn del contacto; cancela los pendientes; no muestra el número; ya no salen ni la calificación ni los automáticos ni los manuales de ese comercio a ese celular |
+| `/f` de un pedido `NOT_APPLICABLE` | Sin enlace de baja |
+| `/f` de una sede con landing de fondo #1A1A2E y botón #FF6B00 | La página usa esos colores, las tipografías y el logo de la landing |
+| `/f` de una sede sin landing | Colores por defecto de la marca |
+| Color inválido guardado | Valor por defecto para ese color |
+
+### 1.12 Ajustes del programa de vendedores (v10, H8)
+
+#### Contraseña
+`step3.accessHelp` usa la constante (12). Ningún texto de contraseña en `src/` dice un mínimo distinto.
+
+#### Código desde la URL
+| Llegada | Campo |
+|---|---|
+| `/registro?codigo=X` con X válido | Bloqueado (`readOnly`, con candado). Muestra «Te recomendó {Nombre I.}» y «Este código viene del enlace de tu vendedor.». No consulta; envía X. |
+| `/registro?codigo=X` válido, pero el servidor lo rechaza al verificar el correo | Se desbloquea y muestra el error (D-65) |
+| `/registro?codigo=X` con X inválido | Editable, con el error de hoy |
+| `/registro` sin parámetro | Editable y opcional |
+
+#### Plazo de pago
+- Registro del vendedor: «…en los 5 primeros días hábiles del mes siguiente…».
+- Contrato v3, cláusula 7.2: «cinco (5)».
+- Vendedor con la v2 aceptada: ve el aviso obligatorio en `/vendedor` y no puede navegar ni guardar hasta aceptar la v3. El evento `POLICY_ACCEPTED` guarda `previousVersion`.
+- Quien estaba a mitad del registro cuando se desplegó recibe «los datos cambiaron, pide otro código» (D-68).
+
+#### Pagos del portal
+| Estado | Texto nuevo |
+|---|---|
+| Por liquidar | «Entra en la liquidación de {mes año}» · «Se paga en los 5 primeros días hábiles de {mes siguiente año}» |
+| En una liquidación generada y no pagada | «En la liquidación {número} · se paga en los 5 primeros días hábiles de {mes siguiente}» |
+| Pagado / omitido / histórico | Sin cambio |
+
+- El mes se calcula en hora de Bogotá con `reviewedAt` (aprobación).
+- Inicio y Liquidaciones muestran: «Liquidamos cada mes cerrado y pagamos en los 5 primeros días hábiles del mes siguiente.»
+
+#### Análisis del reporte de QA
+- El % por comercio es `TenantSubscription.salesCommissionPercent` y se lee al aprobar:
+  - Wompi: dentro de la transacción [repo: src/lib/billing/apply-wompi-payment.ts:137-184].
+  - Transferencia: en el mismo request [repo: src/lib/billing/payment-receipt-process.ts].
+- No hay copia previa del %, ni caché, ni vigencias. Guardar la suscripción escribe el % [repo: src/actions/superadmin/subscription.ts:150-186].
+- **Causa más probable:** QA cambió el % por defecto del vendedor, que solo se copia a los comercios que se registran con su código. Es así por diseño de 063 y Oscar decidió mantenerlo.
+- **Hallazgo del implementador (D-71):** en transferencia, el % se lee antes de `$transaction`. Si se guarda la suscripción en el mismo instante en que se aprueba, puede salir el anterior. No explica el reporte de QA. Se registra y no se corrige en H8.
+- **Consulta de diagnóstico** (solo lectura, lab):
+  ```sql
+  SELECT pr.id, pr."reviewedAt", pr."commissionPercentSnapshot", ts."salesCommissionPercent", ts."updatedAt", sa."defaultCommissionPercent"
+  FROM "PaymentReceipt" pr
+  JOIN "TenantSubscription" ts ON ts."tenantId" = pr."tenantId"
+  LEFT JOIN "SalesAgent" sa ON sa.id = ts."salesAgentId"
+  WHERE pr."tenantId" = '<id>' AND pr.status = 'APPROVED'
+  ORDER BY pr."reviewedAt";
+  ```
+  T-34 revisa los nombres de las columnas contra `schema.prisma`.
+
 ## 2. Contratos en detalle
 
 ### 2.1 `templateParams` de `calificar_pedido`
@@ -166,7 +244,29 @@ En todos los estados válidos se muestran el comercio, la sede, #consecutivo, la
 | CA-26 | Ranking solo con muestra suficiente | R41 | T-13 | `metrics.test` |
 | CA-27 | Atribución desde el pedido | R31 | T-04, T-13 | `create.test`, `metrics.test` |
 | CA-28 | Pestañas del Resumen | R48, R49 | T-15 | `resumen-tab.test` + E2E-3 |
+| CA-30 | (v6) El cajero envía la calificación de un pedido con billetera y sale de inmediato | — | T-21, T-22 | `staff-dispatch.test` + E2E-5 |
+| CA-31 | (v6) Lo enviado a mano no vuelve a salir por el cron | — | T-21 | `staff-dispatch.test`, `dispatch.test` |
+| CA-32 | (v6) Un pedido sin billetera muestra el aviso y no envía | R10 | T-22, T-23 | `staff-dispatch.test` |
+| CA-33 | (v6) Fuera de la franja queda para las 08:00 | franja | T-21 | `staff-dispatch.test` |
+| CA-34 | (v6) Una ya enviada o respondida no se reenvía | R7 | T-21 | `staff-dispatch.test` |
+| CA-35 | (v6) El mesero no ve el botón ni puede enviar | A01 | T-22, T-23 | `order-feedback-staff-action.test` |
+| CA-36 | (v6) Respeta la baja y el cupo | R14, R16 | T-21 | `staff-dispatch.test` |
+| CA-37 | (v8) Comensal sin billetera con la autorización nueva recibe el mensaje | — | T-24, T-25 | `order-feedback-create.test`, `dispatch.test` |
+| CA-38 | (v8) Pedido con la autorización anterior o del personal no recibe | R10 | T-25 | `order-feedback-create.test` |
+| CA-39 | (v8) La autorización muestra el texto nuevo y guarda `pedido-2026-11` | — | T-24 | `customer-order` copy + `create.test` + E2E pedido-comensal |
+| CA-40 | (v8) Baja desde `/f` | R16 | T-26 | `feedback-link-opt-out.test` |
+| CA-41 | (v8) `/f` usa los colores, tipografías y logo de la landing | — | T-27 | `page-state.test` + revisión visual |
+| CA-42 | (v8) Sede sin landing o color inválido → por defecto | — | T-27 | `page-state.test` |
+| CA-43 | (v8) La frontera de audiencias sigue: los datos del pedido no entran a campañas | 062 | T-25 | `branch-order-audience-boundary.test` |
 | CA-29 | (v2) La home anuncia la calificación de pedidos con los textos de G-0 | — (alcance 12) | T-19 | `home-copy.test`, `home-sources.test` + revisión visual en 360/768/1280 px |
+| CA-44 | (v10) El registro del vendedor dice el mismo mínimo de contraseña que valida (12) | — | T-29 | copy + búsqueda estática |
+| CA-45 | (v10) `/registro?codigo=` válido bloquea el campo; el alta queda con ese vendedor | — | T-30 | UI + E2E `@CA-45` |
+| CA-46 | (v10) Un código inválido en la URL o la URL sin parámetro dejan el campo editable; si el servidor rechaza el código, se desbloquea | — | T-30 | UI |
+| CA-47 | (v10) El registro y el portal dicen 5 primeros días hábiles; no queda ninguna mención a 3 | — | T-31 | copy + búsqueda estática |
+| CA-48 | (v10) Un vendedor con la v2 aceptada debe aceptar la v3, cuya cláusula 7.2 dice cinco (5) | — | T-32 | aviso obligatorio + copy |
+| CA-49 | (v10) Un pago aprobado el 15 de nov de 2026 dice «liquidación de noviembre de 2026 · se paga en los 5 primeros días hábiles de diciembre de 2026». Uno aprobado el 30 de nov a las 23:30 (hora de Bogotá) cae en noviembre. Uno de diciembre se paga en enero de 2027 | — | T-33 | puras + UI |
+| CA-50 | (v10) Bajar el % de la suscripción hace que el siguiente pago (Wompi o transferencia) se liquide con el % nuevo y el anterior conserve el suyo | — | T-34 | integración |
+| CA-51 | (v10) La ficha del vendedor explica el alcance de su % por defecto; el % de la suscripción muestra el valor guardado | — | T-35 | UI |
 
 ## 4. Delta a `openspec/specs/*` (se fusiona al cerrar)
 - **domain_model.md:**

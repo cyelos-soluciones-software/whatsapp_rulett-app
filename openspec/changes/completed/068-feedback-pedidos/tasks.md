@@ -1,4 +1,4 @@
-SDD: 17tnjrajf9b · v4 · 2026-11-02
+SDD: 17tnjrajf9b · v10 · 2026-11-02
 
 # Tasks — 068 · whatsapp_rulett-app
 
@@ -51,3 +51,9 @@ Archivos previstos: `src/processor.ts` (líneas 21-28 y cualquier otro log con `
 Criterio de hecho: ningún log del worker incluye nombre ni teléfono del destinatario, para ninguna plantilla. Los logs quedan con el id de la fila, la plantilla, el estado y el código de error de Meta.
 Pruebas: espía del logger en un envío exitoso y en uno fallido; las aserciones existentes sobre logs se ajustan solo en el campo retirado (queda en `decisions.md`).
 Seguridad: A09 (logs sin PII; specs/security.md de 062) · Hotspot: no
+
+> v6 (2026-11-02): el envío manual (H6) es solo de rulett-app. El worker no cambia: las filas manuales usan la misma plantilla `calificar_pedido`.
+
+> v8 (2026-11-02): H7 es solo de rulett-app. El worker no cambia: el mensaje a comensales sin billetera usa la misma plantilla.
+
+> v10 (2026-11-02): H8 (ajustes de vendedores) es solo de rulett-app. El worker no cambia.

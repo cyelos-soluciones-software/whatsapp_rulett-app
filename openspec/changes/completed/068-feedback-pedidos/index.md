@@ -1,4 +1,4 @@
-SDD: 17tnjrajf9b · v5 · 2026-11-02
+SDD: 17tnjrajf9b · v10 · 2026-11-02
 
 # 068 — Calificación de pedidos (NPS + comentario) e informe de experiencia con IA
 
@@ -26,6 +26,9 @@ Historia: `rulett/historias/feedback-pedidos.md` en el proyecto Claude «Rulett 
 | H3 | Pestañas del Resumen y cifras sin IA | T-13, T-15 |
 | H4 | IA: clasificación, cupo, informe semanal y a demanda | T-14 |
 | H5 | Home: destacado «Sabe qué opinan tus clientes» + pregunta frecuente (compuerta G-0 de textos; se publica con el resto en PDN) | T-19 |
+| H6 | (v6) Envío manual de la calificación desde el pedido finalizado | T-20 … T-23 |
+| H7 | (v8) Mensaje a comensales sin billetera con la autorización nueva, baja desde `/f` y `/f` con el diseño de la landing | T-24 … T-28 |
+| H8 | (v10) Ajustes del programa de vendedores: texto de contraseña, código bloqueado desde la URL de `/registro`, pago en 5 días hábiles (contrato `vendedores-v3-2026-11`), liquidación y fecha de pago en el portal, y el reporte de QA sobre el % de comisión | T-29 … T-35 |
 | QA | E2E, documentación, laboratorio y cierre | T-16 … T-18 |
 
 ## Orden de despliegue
@@ -50,6 +53,15 @@ Historia: `rulett/historias/feedback-pedidos.md` en el proyecto Claude «Rulett 
 | test-plan.md / test-report.md | los genera `/pruebas-lab` | — |
 
 ## Versión
+- v10 (2026-11-02). Por pedido de Oscar, los ajustes de vendedores van como **H8 dentro de 068** y no en un cambio aparte. Se descarta la carpeta `069-ajustes-vendedores/`, que nunca se commiteó, y el próximo número libre vuelve a ser 069. Se incorpora el plan del implementador validado: D-65…D-74. H8 no tiene migración ni toca el worker. [humano + validador, 2026-11-02]
+- v9 (2026-11-02). Se valida el plan H7: ALINEADO CON AJUSTES. Se aceptan las desviaciones 1–4 del implementador. Nombre legal en la autorización: CYELOS (Oscar). Se agrega la compuerta G-1 (Legal) antes de pasar H7 a PDN y la variante de envío manual en CP-43. Decisiones D-52…D-58. [humano + validador, 2026-11-02]
+- v8 (2026-11-02). H7, pedido por Oscar:
+  - (a) La autorización del pedido del comensal amplía su finalidad: «…para gestionar este pedido y pedirme por WhatsApp o SMS que lo califique», versión `pedido-2026-11`. Los pedidos del comensal sin billetera, creados con esa versión, también reciben el mensaje en el celular del pedido. Los del mesero no lo reciben.
+  - (b) Baja desde la página `/f`.
+  - (c) `/f` con los colores, las tipografías y el logo de la landing de la sede.
+  - T-24…T-28, CA-37…CA-43, ADR-068-11 y ADR-068-12. Riesgo legal aceptado por Oscar (texto obligatorio ampliado), pendiente de revisión de Legal. El worker no cambia. [humano, 2026-11-02]
+- v7 (2026-11-02). Se valida el plan H6: ALINEADO CON AJUSTES. Se aceptan D-32…D-41 (trigger desde la solicitud, respaldo `MANUAL`, DTO con `dueAt` y `skipReason`, CAS con `answeredAt: null`, worker en `after()`, botón deshabilitado con aviso sin billetera, E2E con la hora fija). Solo cambian design §4.14, index y decisions; los demás archivos quedan en v6. [validador, 2026-11-02]
+- v6 (2026-11-02). Mejora pedida por Oscar: botón «Enviar calificación» en los pedidos finalizados para el administrador y el cajero, que adelanta el envío automático (H6, T-20…T-23, CA-30…CA-36, ADR-068-10). Decisiones de Oscar: un pedido sin billetera muestra el botón con un aviso; se respeta la franja de 08:00 a 21:00; solo administrador y cajero; una sola vez por pedido. Migración nueva, solo expand. El worker no cambia. [humano, 2026-11-02]
 - v5 (2026-11-02). Oscar confirma D-20 tras el spike T-01: Gemini clasifica por defecto; OpenRouter con Jev 1.13 queda como alternativa por variable (`FEEDBACK_CLASSIFIER_PROVIDER=openrouter`) y Microsoft-Decision-1 se descarta. Design §4.11: si el proveedor elegido falla, se usa el otro si está configurado. [humano, 2026-11-02]
 - v4 (2026-11-02). Se valida el plan del worker: ALINEADO CON AJUSTES. Se trabaja directo en `cloud-run`; el índice del botón es requerido en `Config`; se agrega W-05 (logs del worker sin nombre ni teléfono). El fixture de la app vive en `src/lib/__tests__/fixtures/feedback-contract.ts` (D-14). Las decisiones del worker son WD-1…WD-5. [humano + validador, 2026-11-02]
 - v3 (2026-11-01). Se valida el plan de rulett-app: ALINEADO CON AJUSTES. Se aceptan D-1…D-10 (ver `decisions.md`): QR con `qrcode` en el servidor, delegado en los mocks de finalize, host del SMS por ambiente, botón de WA solo en PDN, «cliente» como respaldo del nombre y textos de la home aprobados (G-0). El plan del worker está pendiente. [humano + validador, 2026-11-01]

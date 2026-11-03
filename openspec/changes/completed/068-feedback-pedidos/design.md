@@ -1,4 +1,4 @@
-SDD: 17tnjrajf9b · v5 · 2026-11-02
+SDD: 17tnjrajf9b · v10 · 2026-11-02
 
 # Design — 068 Calificación de pedidos e informe de experiencia
 
@@ -325,6 +325,163 @@ Fuente: `src/lib/marketing/home-copy.ts` (única fuente de textos; las pruebas `
 - No se publican cuotas de IA ni de mensajes (política 030/045).
 - Se publica en el mismo despliegue a PDN que activa la funcionalidad. Si H4 (IA) no llega a PDN, se quita «y un análisis con IA de…» de la pregunta frecuente.
 
+### 4.14 Envío manual desde el pedido finalizado (v6, H6)
+Fuente: [humano, 2026-11-02]. Punto de partida en el código: `dispatchDueOrderFeedback`, `precheckFeedbackDispatch`, `chooseFeedbackChannel`, `queueRow` con CAS sobre `SCHEDULED` e `isInFeedbackWindow` [repo: src/lib/order-feedback/dispatch.ts:26-242]; alcance `'settle'` = cajero o administrador [repo: src/lib/branch-order-auth.ts:10-19].
+
+**Datos** (migración nueva `order_feedback_manual`, solo expand; no se modifica `20261102035337_order_feedback`):
+```prisma
+// OrderFeedback
+dispatchTrigger       MessageTrigger @default(AUTOMATIC)   // MANUAL si lo pidió el personal
+dispatchRequestedById String?                              // FK User, SetNull
+dispatchRequestedAt   DateTime?
+```
+
+**Acción** `sendOrderFeedbackNowAction(orderId)` en `src/actions/order-feedback-staff.ts`:
+1. `requireBranchOrderMutation('settle')`: CSRF + rol cajero o administrador, `tenantId` y `sedeId` de la sesión. El mesero queda fuera.
+2. Zod (`orderId` uuid).
+3. Pedido con `branchOrderByIdWhere(actor)`. El cajero solo ve los de su sede; uno ajeno devuelve «no encontrado».
+4. El pedido debe estar FINALIZED. Si no lo está → `{ error: 'not_finalized' }`.
+5. Si `ORDER_FEEDBACK_MESSAGES_ENABLED !== 'true'` → `{ error: 'disabled' }`.
+6. Se carga su `OrderFeedback`:
+   - no existe (sede apagada o pedido anterior a 068) → `{ error: 'unavailable' }`;
+   - `NOT_APPLICABLE` → `{ error: 'no_wallet' }` (R10, privacidad);
+   - ya salió, ya fue respondida u omitida → `{ ok, outcome: 'already', status }`. No hay reenvío.
+7. Si está `SCHEDULED`, se hace un CAS que fija `dueAt = now`, `dispatchTrigger = MANUAL`, `dispatchRequestedById` y `dispatchRequestedAt`, siempre que siga `SCHEDULED`.
+8. Si la hora de Bogotá está dentro de la franja, se despacha esa sola fila con el mismo código del cron: el bucle del cron se extrae a `dispatchFeedbackRow(row, { now, trigger })`. Con la franja cerrada → `{ ok, outcome: 'scheduled', at: '08:00' }`, y el cron la toma a esa hora por `dueAt`.
+9. Si el despacho la omite (baja, sin cupo, sin teléfono, suscripción, vencida) → `{ ok, outcome: 'skipped', reason }`.
+10. Si se encola → `{ ok, outcome: 'queued_whatsapp' | 'queued_sms' }` y se dispara el worker como en el cron.
+
+- Las filas de cola de un envío manual llevan `trigger = MANUAL` y `reason = ORDER_FEEDBACK`. Siguen fuera de los topes de 056 (R15) y descuentan del cupo (R14).
+- Un clic doble o una carrera con el cron se resuelven con el CAS: el segundo recibe `already`.
+
+**Vista del pedido (personal):**
+- El DTO del pedido suma `feedback?: { status, trigger, sentChannel?, answered: boolean }`, sin teléfono ni comentario.
+- En el pedido Finalizado, `BranchOrderFollowUp` muestra el bloque «Calificación del cliente» con su estado: «Se enviará a las {hh:mm}», «Enviada por WhatsApp/SMS», «Calificó», «Sin billetera: comparte el resumen por WhatsApp», «No se envió: {motivo}».
+- Si el estado es `SCHEDULED` y el actor es cajero o administrador, aparece el botón «Enviar calificación».
+- Los textos van en el `copy` de `order-feedback`.
+- El mesero ve el estado, pero no el botón.
+
+**Ajustes v7 (D-32…D-41):**
+- `dispatchFeedbackRow(row, { now, templateApproved, quotas })` lee el trigger de `row.dispatchTrigger`.
+- El respaldo de `reconcile.ts` lo propaga.
+- El CAS manual exige `answeredAt: null`.
+- El DTO es `feedback?: { status, trigger, dueAt, skipReason, answered }` y `BranchOrderView.feedbackMessagesEnabled`.
+- La acción devuelve `{ outcome, order }`; el worker se dispara en `after()`.
+- El panel `BranchOrderFeedbackPanel` se monta en `BranchOrderWorkspace` junto a `FollowUp`, con `canSend = canSettleOrders(actorKind) && writable`.
+- Sin billetera: botón deshabilitado con el aviso y ninguna petición (D-38).
+
+**Alternativas descartadas:**
+- Reenviar después de un envío automático (decisión de Oscar: una vez).
+- Enviar por WhatsApp fuera de la franja.
+- Enviar a pedidos sin billetera usando el celular del pedido: rompe la frontera de 062 y D-80.
+
+### 4.15 Comensal sin billetera con autorización ampliada (v8, H7)
+Fuente: [humano, 2026-11-02]. Hoy el texto es `consent(tenantName)` = «Autorizo a {comercio} y a CYELOS… a usar mis datos para gestionar este pedido.» y la versión `pedido-2026-10` se guarda en `BranchOrder.customerConsentVersion` [repo: src/lib/customer-order/copy.ts:53-55; specs/security.md].
+
+**Texto y versión**
+- `consent` pasa a «Autorizo a {comercio} y a CYELOS SOLUCIONES DE SOFTWARE S.A.S. a usar mis datos para gestionar este pedido y pedirme por WhatsApp o SMS que lo califique.».
+- Se agrega la constante `CUSTOMER_ORDER_CONSENT_VERSION = 'pedido-2026-11'` y la lista `FEEDBACK_CONSENT_VERSIONS = ['pedido-2026-11']`.
+- La casilla sigue siendo obligatoria (decisión de Oscar). La política de privacidad se enlaza igual que hoy.
+
+**Datos** (migración nueva `order_feedback_contact`, solo expand):
+```prisma
+enum OrderFeedbackContact { WALLET ORDER_CONSENT }
+// OrderFeedback
+contactSource OrderFeedbackContact?   // null = sin contacto (NOT_APPLICABLE)
+```
+Las solicitudes existentes con `customerUserId` se rellenan como `WALLET` en la misma migración.
+
+**Creación** (`createOrderFeedbackInTx`):
+
+| Pedido | Resultado |
+|---|---|
+| Con `customerUserId` | `SCHEDULED`, `contactSource = WALLET` (sin cambio) |
+| `origin = CUSTOMER`, sin `customerUserId`, `customerConsentVersion` en `FEEDBACK_CONSENT_VERSIONS` y `customerPhone` presente | `SCHEDULED`, `contactSource = ORDER_CONSENT` |
+| Cualquier otro (personal, versión anterior, sin celular) | `NOT_APPLICABLE` (sin cambio) |
+
+**Despacho** (`dispatchFeedbackRow`):
+- Teléfono:
+  - `WALLET`: el del perfil (sin cambio).
+  - `ORDER_CONSENT`: `toInternationalMsisdn(order.customerPhoneCountryCode, order.customerPhone)`.
+- Nombre: primer nombre de `order.customerName`, o «cliente».
+- La baja (`MessageOptOut(tenantId, msisdn)`), el cupo, la franja, la suscripción y el interruptor aplican igual.
+- Si el celular no es válido para msisdn, la solicitud se omite con `NO_PHONE`.
+- El envío manual (H6) funciona igual con `ORDER_CONSENT`: el botón deja de mostrar «sin billetera» para esos pedidos.
+- Con `NOT_APPLICABLE`, el aviso pasa a «Este cliente no autorizó mensajes o lo registró el personal».
+
+**Frontera de privacidad (reemplaza la regla absoluta de 062):**
+- Los datos del pedido del comensal **solo** se usan para el mensaje transaccional `ORDER_FEEDBACK` de **ese** pedido, con la versión `pedido-2026-11`.
+- Siguen sin entrar a audiencias, campañas, envíos manuales ni automáticos de 056.
+- `branch-order-audience-boundary.test.ts` se amplía:
+  - las audiencias siguen excluyendo los datos del pedido;
+  - el único consumidor permitido de `customerPhone` fuera del pedido es `order-feedback/dispatch.ts`, con `reason = ORDER_FEEDBACK`.
+- 062 D-80 no cambia: no se vincula el pedido a ninguna billetera.
+
+**Riesgos:**
+- **Celular no verificado:** alguien puede escribir el número de otra persona. Se mitiga con un solo mensaje por pedido, el tope de 3 pedidos «Por confirmar» por celular y sede (062), la baja por comercio y Turnstile en el pedido.
+- **Legal:** la finalidad queda dentro de una casilla obligatoria. Riesgo aceptado por Oscar, pendiente de Legal.
+
+**Ajustes v9 (D-52…D-58):**
+- La versión vive en `src/lib/customer-order/limits.ts` (`CUSTOMER_ORDER_CONSENT_VERSION`) y el texto en `copy.ts`.
+- El número del pedido se resuelve **solo** en `dispatch.ts` (`resolveFeedbackContactMsisdn`); la baja lo importa de ahí, y la prueba de la frontera verifica que ningún otro archivo fuera del pedido lee `customerPhone`.
+- `contactSource` se escribe solo si no es nulo, y `planOrderFeedback` conserva su firma.
+- El nombre legal del texto sigue siendo CYELOS SOLUCIONES DE SOFTWARE S.A.S., igual que la política y Habeas Data (D-56).
+
+### 4.16 Baja desde `/f` (v8, H7)
+- En la página `/f/{token}` en estado válido (cualquiera menos `invalid`), un enlace discreto: «No quiero recibir más mensajes de {comercio}».
+- Lo atiende `optOutFromFeedbackLinkAction({ token })`:
+  - CSRF y Zod.
+  - Turnstile si no hay sesión.
+  - Verifica el token.
+  - Resuelve el msisdn **en el servidor**: el de la billetera si el contacto es `WALLET`, el del pedido si es `ORDER_CONSENT`. El cliente nunca lo envía.
+  - Llama a `setOptOut(tx, { tenantId, phone, optedOut: true, userId: null })`, que es reutilizable [repo: src/lib/auto-messages/opt-out.ts:40-118]. Eso cancela los `PENDING` de ese teléfono.
+  - Si el pedido no tiene contacto (`NOT_APPLICABLE`), no hay nada que dar de baja: el enlace no se muestra.
+- Mensaje de resultado: «Listo. {comercio} no te enviará más mensajes. Puedes reactivarlos desde tu billetera.»
+- La página nunca muestra el número.
+- La reactivación sigue siendo solo desde la billetera (056).
+- `updatedByUserId` queda nulo y el log registra `source: 'feedback_link'`.
+
+### 4.17 `/f` con el diseño de la landing de la sede (v8, H7)
+
+**Ajustes v9:**
+- La landing es la de la sede del pedido (`BranchLanding.branchId` es único), con las mismas condiciones que el menú (`resolvePublicBranchLandingAccess`): comercio activo, suscripción vigente, landing activa y sede activa. Si alguna no se cumple, se usan los valores por defecto.
+- El logo solo se usa si `isAllowedR2PublicUrl`.
+- Se repite el patrón de estilo en `/f` sin extraer un helper compartido, para no tocar `BranchLandingView` ni `DigitalMenuView` (línea base de celular de 063).
+
+- Hoy `/f` usa `DEFAULT_UI_THEME` de la marca [repo: src/app/f/layout.tsx].
+- `loadFeedbackPageView` suma `theme` con estos datos de la landing de la sede del pedido:
+  - `backgroundColor`, `textColor`, `buttonColor` y `buttonTextColor`, validados con `parseLandingHexColor` y `BRANCH_LANDING_THEME_DEFAULTS` [repo: src/lib/branch-landing-theme.ts];
+  - las tipografías (`ThemeFontVars`, 063 H6);
+  - el logo del comercio.
+- Se usa la landing principal o activa de la sede [verificar en T-27 cuál usa hoy el menú].
+- Se aplica con el mismo patrón de `BranchLandingView` (`style` con variables de color y tipografía) en el contenedor de `OrderFeedbackPublic`. Todo lo cubre ese contenedor:
+  - la tarjeta del pedido, el formulario (botones 0–10 en `buttonColor`), los estados, el agradecimiento y el bloque de Descubre;
+  - la baja y el aviso de datos, en el color del texto.
+- Sin landing, se usan los valores por defecto.
+- No se usan `auth()`, `cookies()` ni `headers()` (066).
+- La billetera conserva su diseño de Rulett (decisión de Oscar).
+
+### 4.18 Ajustes del programa de vendedores (v10, H8)
+El comportamiento detallado está en specs §1.12. Decisiones técnicas:
+
+- **Contraseña:** el texto se arma con `PASSWORD_REQUIREMENTS_HINT` / `SECURE_PASSWORD_MIN_LENGTH` (12) [repo: src/lib/schemas/cashier-password.ts:3,103-104]. El único texto distinto era `signup-copy.ts:78`.
+- **Código bloqueado:**
+  - `registro/page.tsx` pasa `referralLocked` cuando el servidor resolvió una etiqueta válida.
+  - El campo queda `readOnly` y no consulta.
+  - Si el servidor rechaza el código al verificar el correo (por ejemplo, el vendedor se desactivó), el campo se desbloquea (D-65).
+  - El servidor no cambia.
+- **Plazo:** la constante `COMMISSION_PAYOUT_BUSINESS_DAYS = 5` vive en `src/lib/sales-agent/commission-defaults.ts` (D-66). El contrato pasa a `SALES_AGENT_POLICY_VERSION = 'vendedores-v3-2026-11'` con la cláusula 7.2 en «cinco (5)». La nueva aceptación usa el aviso obligatorio de 063 H10.
+- **Portal:**
+  - `VendorPaymentRow` suma `settlementMonthLabel`, `payoutWindowLabel` y `settlementNumber`.
+  - Por liquidar: el mes sale de `periodMonthOf(reviewedAt ?? createdAt)` y el pago es el mes siguiente.
+  - Liquidado: el mes y el número salen de la liquidación.
+  - Una función pura nueva arma la frase «noviembre de 2026», sin tocar `formatPeriodMonthLabel` (D-69).
+- **% de comisión:**
+  - El motor ya lee el % vigente de la suscripción al aprobar (specs §1.12, análisis).
+  - Una prueba de integración lo demuestra para Wompi y para transferencia.
+  - En la suscripción, el campo se monta con `key` por valor.
+  - La ficha del vendedor explica el alcance de su % por defecto.
+
 ## 5. Contratos nuevos o modificados
 
 | Contrato | Cambio | Consumidores |
@@ -379,6 +536,19 @@ Fuente: `src/lib/marketing/home-copy.ts` (única fuente de textos; las pruebas `
 - Cookie de la pestaña: no es sensible; va con `sameSite=lax` y sin `httpOnly` porque la escribe el cliente (T-15).
 - Expresiones de redacción sin retroceso catastrófico: sin `.*` anidados (T-14; hallazgos previos de 057/058).
 
+### 6.5 Envío manual (v6)
+- A01: alcance `'settle'` + `branchOrderByIdWhere`.
+- CSRF en la acción.
+- API3: el DTO no expone teléfono ni comentario.
+- A04: el CAS impide el doble envío.
+- A09: el log `order-feedback` incluye `trigger` y el id del actor, nunca datos del cliente.
+
+### 6.6 v8
+- **Privacidad:** la frontera de 062 se acota a un único uso transaccional, con la versión de autorización guardada en cada pedido. El riesgo legal lo aceptó Oscar y queda en `proposal.md` (Riesgos).
+- **A01 en la baja desde `/f`:** solo con un token válido; el teléfono se resuelve en el servidor y no se expone.
+- **A04:** Turnstile sin sesión en la baja.
+- **A03:** los colores se validan con hex estricto antes de pasarlos a `style`.
+
 ## 7. Retrocompatibilidad
 - **Esquema:** solo expand (columna con default, valores de enum al final, tablas nuevas). El código anterior ignora todo lo nuevo. `ALTER TYPE … ADD VALUE` no corre dentro de una transacción en versiones antiguas de PG; Neon PG ≥ 16 lo permite. Va en una migración propia si Prisma lo exige [verificar en T-02].
 - **Colas:** una fila con `qrCampaignId` nulo y `origin TENANT` es nueva para las vistas. T-07 revisa las consultas que hacen `include` o `join` de la campaña y las que filtran por campaña (`WhatsappQueueTable`, panel SMS, `dashboard-metrics`) para que no fallen.
@@ -387,6 +557,10 @@ Fuente: `src/lib/marketing/home-copy.ts` (única fuente de textos; las pruebas `
 - **Resumen:** mismos datos y componentes reorganizados. La URL `/admin` sin parámetro sigue funcionando.
 - **Flags:** `ORDER_FEEDBACK_MESSAGES_ENABLED=false` deja la funcionalidad sin enviar nada.
 - **Rollback:** apagar los flags; quitar los crons de `vercel.json`; las columnas y tablas quedan sin uso. Revertir la migración (`DROP TABLE` de las dos tablas y la columna; el valor de enum queda) se documenta en `closure.md`; no se ejecuta salvo decisión explícita.
+
+- (v6) Migración `order_feedback_manual`, solo expand, con `dispatchTrigger @default(AUTOMATIC)`. Las filas existentes quedan como automáticas y el código anterior ignora las columnas. El cron sigue igual: ordena por `dueAt`.
+
+- (v8) Migración `order_feedback_contact`, solo expand (enum + columna nula + relleno `WALLET` donde hay `customerUserId`). Los pedidos con `pedido-2026-10` no cambian de comportamiento. El texto de la autorización cambia solo para los pedidos nuevos.
 
 ## 8. Duplicación (Quality Gate ≤ 3 %)
 - **Cupo restante por canal:** se extrae de `run.ts:140-157` un helper puro `computeChannelRemaining(limit, sent, pending)` y una consulta compartida en `src/lib/auto-messages/channel-quota.ts`. `run.ts` y `order-feedback/dispatch.ts` lo usan. Se refactoriza `run.ts` sin cambiar comportamiento; sus pruebas existentes no se tocan.

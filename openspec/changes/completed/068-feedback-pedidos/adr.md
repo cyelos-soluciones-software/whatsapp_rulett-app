@@ -1,4 +1,4 @@
-SDD: 17tnjrajf9b · v5 · 2026-11-02
+SDD: 17tnjrajf9b · v10 · 2026-11-02
 
 # ADR — 068 Calificación de pedidos
 
@@ -85,3 +85,27 @@ SDD: 17tnjrajf9b · v5 · 2026-11-02
   - Una sección propia en la home: alarga una página que 058 acortó.
   - Una tarjeta en `HOME_BUSINESS.capabilities`: exige una captura real que todavía no existe.
   - Cambiar el título del hero.
+
+## ADR-068-10 · Envío manual que adelanta la misma solicitud (v6)
+- **Contexto:** Oscar pide que el administrador o el cajero envíen la calificación de inmediato en un pedido finalizado, y que el envío manual reemplace al automático [humano, 2026-11-02].
+- **Decisión:** el botón no crea una solicitud nueva. Adelanta la existente (`dueAt=now`, `dispatchTrigger=MANUAL`) con un CAS sobre `SCHEDULED` y la despacha con la misma función del cron (`dispatchFeedbackRow`). Así se aplican exactamente las mismas reglas (billetera, baja, cupo, suscripción, franja) y se garantiza un solo envío por pedido.
+- **Alternativas descartadas:**
+  - Un segundo canal de envío con sus propias reglas: duplica lógica y abre el doble envío.
+  - Encolar directo sin pasar por la solicitud: rompe la reconciliación y el rastreo por canal.
+
+## ADR-068-11 · Mensaje a comensales sin billetera con la autorización ampliada (v8)
+- **Contexto:** Oscar pide enviar la calificación también a quien pide sin billetera, usando la autorización del pedido [humano, 2026-11-02]. El texto actual solo autoriza a «gestionar este pedido», y 062 prohibió usar esos datos para mensajes.
+- **Decisión:**
+  - Nueva versión obligatoria `pedido-2026-11`, que agrega la finalidad «pedirme por WhatsApp o SMS que lo califique».
+  - Solo pedidos del comensal con esa versión.
+  - Un mensaje transaccional por pedido, al celular del pedido.
+  - Baja desde `/f`.
+- **Alternativas descartadas:**
+  - Casilla aparte opcional: más limpia legalmente; recomendada por Claude y descartada por Oscar.
+  - Usar la versión anterior: no informa esa finalidad.
+  - Pedidos del personal: el cliente no autoriza.
+- **Riesgo:** la finalidad queda dentro de una casilla obligatoria. Validar con Legal antes de PDN.
+
+## ADR-068-12 · `/f` con el diseño de la landing de la sede (v8)
+- **Decisión:** se aplican los colores, las tipografías y el logo de la landing de la sede, igual que `BranchLandingView`, con los valores por defecto si no hay landing. La billetera no cambia.
+- **Alternativa descartada:** solo colores.
