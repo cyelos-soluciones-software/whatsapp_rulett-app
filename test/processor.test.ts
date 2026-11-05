@@ -1,25 +1,9 @@
 import assert from 'node:assert/strict';
 import { afterEach, describe, it, mock } from 'node:test';
 import type { QueueRepository } from '../src/db/queue.js';
-import { maskPhone } from '../src/lib/mask-phone.js';
 import { processBatch } from '../src/processor.js';
 import type { WhatsappClient } from '../src/services/whatsapp.js';
 import type { WhatsappQueueRow, WhatsappSendResult } from '../src/types.js';
-
-describe('maskPhone', () => {
-  it('deja solo los últimos 4 dígitos', () => {
-    assert.equal(maskPhone('573001234567'), '***4567');
-  });
-
-  it('ignora símbolos y espacios', () => {
-    assert.equal(maskPhone('+57 300 123 4567'), '***4567');
-  });
-
-  it('no revela números de 4 dígitos o menos', () => {
-    assert.equal(maskPhone('4567'), '***');
-    assert.equal(maskPhone(''), '***');
-  });
-});
 
 const platformRow: WhatsappQueueRow = {
   id: 'q-1',
@@ -79,7 +63,7 @@ afterEach(() => {
 });
 
 describe('processBatch', () => {
-  it('envía una fila de plataforma sin campaña y loguea el teléfono enmascarado', async () => {
+  it('envía una fila de plataforma sin campaña y no loguea el teléfono (068 W-05)', async () => {
     const logs = captureLogs();
     const { queue, calls } = fakeQueue([platformRow]);
 
@@ -89,7 +73,7 @@ describe('processBatch', () => {
     assert.deepEqual(calls.sent, ['q-1']);
     const processing = logs.find((e) => e.message === 'Procesando mensaje');
     assert.ok(processing);
-    assert.equal(processing.userPhone, '***4567');
+    assert.equal('userPhone' in processing, false);
     assert.equal(processing.campaignId, null);
     assert.ok(!JSON.stringify(logs).includes('573001234567'));
   });
@@ -133,3 +117,76 @@ describe('processBatch', () => {
     assert.ok(!logs.some((e) => e.message === 'Filas PROCESSING abandonadas devueltas a PENDING'));
   });
 });
+
+describe('processBatch — logs sin datos personales (068 W-05, WD-3)', () => {
+  const customerRow: WhatsappQueueRow = {
+    ...platformRow,
+    id: 'q-9',
+    qrCampaignId: null,
+    userPhone: '573109876543',
+    userName: 'Ana María Pérez',
+    templateName: 'calificar_pedido',
+    templateParams: {
+      nombre_tenant: 'La Previa',
+      nombre_usuario: 'Ana',
+      numero_pedido: '128',
+      nombre_sede: 'Sede Centro',
+      fecha_pedido: '1 nov 2026',
+      boton_calificacion: 'AbCdEfGhIjKlMnOpQrStUv0123456789abcdEF',
+    },
+  };
+
+  function assertNoPersonalData(logs: Array<Record<string, unknown>>) {
+    const text = JSON.stringify(logs);
+    for (const leaked of ['573109876543', '9876543', '6543', 'Ana María', 'Pérez']) {
+      assert.ok(!text.includes(leaked), `el log incluye ${leaked}`);
+    }
+    for (const entry of logs) {
+      assert.equal('userName' in entry, false);
+      assert.equal('userPhone' in entry, false);
+    }
+  }
+
+  it('envío exitoso: id de fila, plantilla y estado SENT, sin nombre ni teléfono', async () => {
+    const logs = captureLogs();
+    const { queue } = fakeQueue([customerRow]);
+
+    await processBatch(queue, fakeWhatsapp({ ok: true, messageId: 'wamid.9', statusCode: 200 }), 50);
+
+    assertNoPersonalData(logs);
+    assert.deepEqual(
+      logs.find((e) => e.message === 'Mensaje enviado'),
+      {
+        ts: logs.find((e) => e.message === 'Mensaje enviado')?.ts,
+        level: 'info',
+        message: 'Mensaje enviado',
+        queueId: 'q-9',
+        templateName: 'calificar_pedido',
+        status: 'SENT',
+        messageId: 'wamid.9',
+        statusCode: 200,
+      },
+    );
+  });
+
+  it('envío fallido: id de fila, plantilla, estado FAILED y código de Meta, sin nombre ni teléfono', async () => {
+    const logs = captureLogs();
+    const { queue } = fakeQueue([customerRow]);
+
+    await processBatch(
+      queue,
+      fakeWhatsapp({ ok: false, statusCode: 400, error: '(#132000) Number of parameters does not match | code=132000' }),
+      50,
+    );
+
+    assertNoPersonalData(logs);
+    const failed = logs.find((e) => e.message === 'Fallo al enviar mensaje');
+    assert.ok(failed);
+    assert.equal(failed.queueId, 'q-9');
+    assert.equal(failed.templateName, 'calificar_pedido');
+    assert.equal(failed.status, 'FAILED');
+    assert.equal(failed.statusCode, 400);
+    assert.match(String(failed.error), /code=132000/);
+  });
+});
+

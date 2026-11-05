@@ -5,8 +5,8 @@ Gracias por contribuir al worker de WhatsApp de Rulett. Esta guía aplica a desa
 ## Antes de empezar
 
 1. Lee [**AGENTS.md**](AGENTS.md) — contexto completo del proyecto.
-2. Lee [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) — setup local.
-3. Lee [docs/CONVENTIONS.md](docs/CONVENTIONS.md) — estándares de código.
+2. Lee [openspec/runbooks/DEVELOPMENT.md](./openspec/runbooks/DEVELOPMENT.md) — setup local.
+3. Lee [openspec/runbooks/CONVENTIONS.md](./openspec/runbooks/CONVENTIONS.md) — estándares de código.
 
 ## Flujo de trabajo
 
@@ -49,9 +49,9 @@ git commit -m "feat: descripción del cambio"
 2. Incluir test plan (aunque sea manual).
 3. Actualizar documentación si el cambio afecta:
    - Variables de entorno → `.env.example`, `AGENTS.md`
-   - Schema de BD → `docs/DATABASE.md`, `sql/schema.sql`
-   - Scripts → `docs/DEVELOPMENT.md`
-   - Arquitectura → `docs/ARCHITECTURE.md`
+   - Schema de BD → `openspec/runbooks/DATABASE.md`, `sql/schema.sql`
+   - Scripts → `openspec/runbooks/DEVELOPMENT.md`
+   - Arquitectura → `openspec/runbooks/ARCHITECTURE.md`
 
 ### Plantilla de PR
 

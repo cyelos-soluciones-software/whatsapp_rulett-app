@@ -1,12 +1,15 @@
 import { Pool } from 'pg';
 import type { Config } from '../config.js';
 import {
+  FEEDBACK_BODY_PARAMS,
+  FEEDBACK_TEMPLATE_NAME,
   isV2Template,
   SUBSCRIPTION_REMINDER_7D_TEMPLATE,
   SUBSCRIPTION_REMINDER_DUE_DAY_TEMPLATE,
   V2_TEMPLATE_BODY_PARAMS,
 } from '../types.js';
 import type {
+  FeedbackTemplateParams,
   QueueStatus,
   SubscriptionReminderTemplateParams,
   TenantTemplateParams,
@@ -74,6 +77,30 @@ function parseV2Params(
   return parsed as TenantTemplateParams;
 }
 
+/** 068: el token firmado del enlace (ADR-068-2), el mismo patrón que valida rulett-app al encolar. */
+const FEEDBACK_BUTTON_PATTERN = /^[A-Za-z0-9_-]{38}$/;
+
+/**
+ * `calificar_pedido` (068): todas las variables con texto y `boton_calificacion` con forma de token; es lo
+ * único que se concatena a la URL del botón. Si falta algo, `null` y la fila termina FAILED sin llamar a
+ * Meta. Las claves desconocidas se descartan. No toca la validación UUID de las v2 (WD-4).
+ */
+function parseFeedbackParams(o: Record<string, unknown>): FeedbackTemplateParams | null {
+  if (!nonEmptyString(o.nombre_tenant)) return null;
+  if (typeof o.boton_calificacion !== 'string' || !FEEDBACK_BUTTON_PATTERN.test(o.boton_calificacion)) return null;
+
+  const parsed: Record<string, string> = {
+    nombre_tenant: o.nombre_tenant,
+    boton_calificacion: o.boton_calificacion,
+  };
+  for (const name of FEEDBACK_BODY_PARAMS) {
+    const value = o[name];
+    if (!nonEmptyString(value)) return null;
+    parsed[name] = value;
+  }
+  return parsed as FeedbackTemplateParams;
+}
+
 export function parseTemplateParams(
   raw: unknown,
   templateName: string,
@@ -93,6 +120,9 @@ export function parseTemplateParams(
     templateName === SUBSCRIPTION_REMINDER_DUE_DAY_TEMPLATE
   ) {
     return parseSubscriptionReminderParams(templateName, o);
+  }
+  if (templateName === FEEDBACK_TEMPLATE_NAME) {
+    return parseFeedbackParams(o);
   }
   if (isV2Template(templateName)) {
     return parseV2Params(templateName, o);

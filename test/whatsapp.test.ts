@@ -4,6 +4,7 @@ import type { Config } from '../src/config.js';
 import { parseTemplateParams } from '../src/db/queue.js';
 import { WhatsappClient } from '../src/services/whatsapp.js';
 import type { WhatsappQueueRow } from '../src/types.js';
+import { FEEDBACK_CONTRACT, FEEDBACK_CONTRACT_TOKEN } from './fixtures/feedback-contract.js';
 import { CONTRACT_TENANT_ID, V2_CONTRACT } from './fixtures/v2-contract.js';
 
 const config: Config = {
@@ -17,6 +18,7 @@ const config: Config = {
   whatsappAccountId: 'acc-1',
   whatsappLanguageCode: 'es_CO',
   whatsappV2ButtonIndex: '1',
+  whatsappFeedbackButtonIndex: '0',
 };
 
 const EMPTY_PARAMS_ERROR = 'templateParams vacío: no se puede enviar plantilla con variables';
@@ -456,3 +458,92 @@ describe('sendTemplateMessage — v2 con params incompletos fallan sin llamar a 
     assert.equal(result.ok, true);
   });
 });
+
+describe('sendTemplateMessage — calificar_pedido (068 W-01, contrato)', () => {
+  it('header nombre_tenant + body en orden + botón con el token en el índice 0', async () => {
+    const client = new WhatsappClient(config);
+    const result = await client.sendTemplateMessage(
+      buildRow(FEEDBACK_CONTRACT.templateName, FEEDBACK_CONTRACT.templateParams),
+    );
+
+    assert.equal(result.ok, true);
+    assert.deepEqual(sentBody(), {
+      messaging_product: 'whatsapp',
+      to: '573001234567',
+      type: 'template',
+      template: {
+        name: 'calificar_pedido',
+        language: { code: 'es_CO' },
+        components: FEEDBACK_CONTRACT.components,
+      },
+    });
+  });
+
+  it('el fixture sobrevive al viaje como texto JSON', async () => {
+    const client = new WhatsappClient(config);
+    await client.sendTemplateMessage(
+      buildRow(FEEDBACK_CONTRACT.templateName, JSON.stringify(FEEDBACK_CONTRACT.templateParams)),
+    );
+
+    assert.deepEqual(sentComponents(), FEEDBACK_CONTRACT.components);
+  });
+
+  it('con WHATSAPP_FEEDBACK_BUTTON_PARAM_NAME el botón lleva parameter_name; el índice es configurable', async () => {
+    const client = new WhatsappClient({
+      ...config,
+      whatsappFeedbackButtonIndex: '2',
+      whatsappFeedbackButtonParamName: 'boton_calificacion',
+    });
+    await client.sendTemplateMessage(buildRow(FEEDBACK_CONTRACT.templateName, FEEDBACK_CONTRACT.templateParams));
+
+    assert.deepEqual((sentComponents() as unknown[])[2], {
+      type: 'button',
+      sub_type: 'url',
+      index: '2',
+      parameters: [{ type: 'text', parameter_name: 'boton_calificacion', text: FEEDBACK_CONTRACT_TOKEN }],
+    });
+  });
+
+  it('la configuración del botón v2 no afecta a calificar_pedido ni al revés', async () => {
+    const client = new WhatsappClient({ ...config, whatsappV2ButtonIndex: '5', whatsappV2ButtonParamName: 'boton_comercio' });
+    await client.sendTemplateMessage(buildRow(FEEDBACK_CONTRACT.templateName, FEEDBACK_CONTRACT.templateParams));
+    assert.deepEqual(sentComponents(), FEEDBACK_CONTRACT.components);
+
+    fetchMock.mock.resetCalls();
+    const [v2] = V2_CONTRACT;
+    await new WhatsappClient({ ...config, whatsappFeedbackButtonIndex: '7' }).sendTemplateMessage(
+      buildRow(v2.templateName, v2.templateParams),
+    );
+    assert.deepEqual(sentComponents(), v2.components);
+  });
+
+  it('las claves desconocidas no viajan a Meta', async () => {
+    const client = new WhatsappClient(config);
+    await client.sendTemplateMessage(
+      buildRow(FEEDBACK_CONTRACT.templateName, { ...FEEDBACK_CONTRACT.templateParams, cupon: 'x', boton_comercio: CONTRACT_TENANT_ID }),
+    );
+
+    assert.deepEqual(sentComponents(), FEEDBACK_CONTRACT.components);
+  });
+});
+
+describe('sendTemplateMessage — calificar_pedido con params inválidos falla sin llamar a Meta (068 W-02)', () => {
+  const cases: Array<[string, Record<string, unknown>]> = [
+    ['sin boton_calificacion', { ...FEEDBACK_CONTRACT.templateParams, boton_calificacion: undefined }],
+    ['token de 37 caracteres', { ...FEEDBACK_CONTRACT.templateParams, boton_calificacion: FEEDBACK_CONTRACT_TOKEN.slice(1) }],
+    ['token con caracteres inválidos', { ...FEEDBACK_CONTRACT.templateParams, boton_calificacion: `${FEEDBACK_CONTRACT_TOKEN.slice(1)}+` }],
+    ['sin fecha_pedido', { ...FEEDBACK_CONTRACT.templateParams, fecha_pedido: undefined }],
+    ['nombre_tenant vacío', { ...FEEDBACK_CONTRACT.templateParams, nombre_tenant: '' }],
+  ];
+
+  for (const [label, params] of cases) {
+    it(label, async () => {
+      const client = new WhatsappClient(config);
+      const result = await client.sendTemplateMessage(buildRow(FEEDBACK_CONTRACT.templateName, params));
+
+      assert.deepEqual(result, { ok: false, error: EMPTY_PARAMS_ERROR });
+      assert.equal(fetchMock.mock.callCount(), 0);
+    });
+  }
+});
+

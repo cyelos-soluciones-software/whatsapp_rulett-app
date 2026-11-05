@@ -49,4 +49,4 @@ Ver [integrations.md](./integrations.md) troubleshooting Meta.
 
 ## Local
 
-Docker Compose PostgreSQL puerto `5440` — ver `docs/DEVELOPMENT.md`.
+Docker Compose PostgreSQL puerto `5440` — ver `openspec/runbooks/DEVELOPMENT.md`.

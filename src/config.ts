@@ -14,6 +14,10 @@ export interface Config {
   whatsappV2ButtonIndex: string;
   /** Si está definido, el parámetro del botón se envía con este `parameter_name`; si no, va posicional. */
   whatsappV2ButtonParamName?: string;
+  /** 068: posición del botón «Calificar» de `calificar_pedido` (índice base 0, como texto). */
+  whatsappFeedbackButtonIndex: string;
+  /** 068: si está definido, el parámetro del botón de calificación va con este `parameter_name`. */
+  whatsappFeedbackButtonParamName?: string;
 }
 
 const PRISMA_ONLY_QUERY_PARAMS = [
@@ -132,5 +136,7 @@ export function loadConfig(): Config {
     whatsappLanguageCode: process.env.WHATSAPP_LANGUAGE_CODE?.trim() || 'es_CO',
     whatsappV2ButtonIndex: parseNonNegativeIntText('WHATSAPP_V2_BUTTON_INDEX', '1'),
     whatsappV2ButtonParamName: process.env.WHATSAPP_V2_BUTTON_PARAM_NAME?.trim() || undefined,
+    whatsappFeedbackButtonIndex: parseNonNegativeIntText('WHATSAPP_FEEDBACK_BUTTON_INDEX', '0'),
+    whatsappFeedbackButtonParamName: process.env.WHATSAPP_FEEDBACK_BUTTON_PARAM_NAME?.trim() || undefined,
   };
 }

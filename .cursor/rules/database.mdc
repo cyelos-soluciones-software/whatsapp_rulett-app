@@ -23,4 +23,4 @@ FOR UPDATE SKIP LOCKED
 
 `templateParams`: JSON con variables Meta (`nombre_tenant`, etc.). Lo inserta rulett-app; el worker solo lee y envía.
 
-Ver `docs/DATABASE.md` para schema completo.
+Ver `openspec/runbooks/DATABASE.md` para schema completo.

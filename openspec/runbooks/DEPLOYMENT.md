@@ -24,12 +24,16 @@ WHATSAPP_ACCOUNT_ID=868325479011642
 WHATSAPP_LANGUAGE_CODE=es_CO
 WHATSAPP_V2_BUTTON_INDEX=1
 # WHATSAPP_V2_BUTTON_PARAM_NAME=boton_comercio
+WHATSAPP_FEEDBACK_BUTTON_INDEX=0
+# WHATSAPP_FEEDBACK_BUTTON_PARAM_NAME=boton_calificacion
 WORKER_API_KEY=secreto_largo_aleatorio
 PORT=8080
 NODE_ENV=production
 ```
 
 **Plantillas v2 (056):** `WHATSAPP_V2_BUTTON_INDEX` (default `1`; debe coincidir con el orden de botones aprobado en Meta; un valor que no sea entero ≥ 0 impide el arranque) y `WHATSAPP_V2_BUTTON_PARAM_NAME` (opcional; sin definir, el parámetro del botón va posicional). En Cloud Run se cambian con una revisión nueva, sin rebuild. Despliega esta versión del worker antes de activar una plantilla v2 en rulett-app.
+
+**Calificación de pedidos (068):** `WHATSAPP_FEEDBACK_BUTTON_INDEX` (default `0`; índice del botón «Calificar» aprobado en Meta; un valor que no sea entero ≥ 0 impide el arranque) y `WHATSAPP_FEEDBACK_BUTTON_PARAM_NAME` (opcional; solo si Meta registró la variable de la URL con nombre). Orden: desplegar esta versión del worker → aprobar `calificar_pedido` en Meta (T-00) y ajustar las dos variables con lo que Meta registró → envío de prueba en lab → en rulett-app, `WHATSAPP_FEEDBACK_TEMPLATE_APPROVED=true`. En lab solo se verifica la entrega: el botón apunta a `www.rulett.app` (D-6).
 
 `PORT` lo asigna Render automáticamente en Web Service; no hace falta fijarlo manualmente.
 
@@ -65,7 +69,7 @@ NODE_ENV=production
 
 ## Cloud Run
 
-Runbook completo (Artifact Registry, Secret Manager, servicio, corte a IAM y rollback): [`openspec/changes/active/054-gemini-aviso-cloud-run/design.md`](../openspec/changes/active/054-gemini-aviso-cloud-run/design.md), sección «Paso a paso — Cloud Run».
+Runbook completo (Artifact Registry, Secret Manager, servicio, corte a IAM y rollback): [`openspec/changes/active/054-gemini-aviso-cloud-run/design.md`](../changes/completed/054-gemini-aviso-cloud-run/design.md), sección «Paso a paso — Cloud Run».
 
 Este build (rama `cloud-run`) se comporta distinto del que corre en Render:
 

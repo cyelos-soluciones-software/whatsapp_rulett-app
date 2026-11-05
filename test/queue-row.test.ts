@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { mapRow } from '../src/db/queue.js';
+import { FEEDBACK_CONTRACT, FEEDBACK_CONTRACT_TOKEN } from './fixtures/feedback-contract.js';
 import { CONTRACT_TENANT_ID, V2_CONTRACT } from './fixtures/v2-contract.js';
 
 const baseRow = {
@@ -142,3 +143,55 @@ describe('mapRow — plantillas v2', () => {
     assert.deepEqual(row.templateParams?.nombre_usuario, 'Ana');
   });
 });
+
+describe('mapRow — calificar_pedido (068 W-02)', () => {
+  const feedbackRow = (templateParams: unknown, templateName = FEEDBACK_CONTRACT.templateName) => ({
+    ...baseRow,
+    qrCampaignId: null,
+    templateName,
+    templateParams,
+    languageCode: 'es_CO',
+  });
+  const valid = FEEDBACK_CONTRACT.templateParams;
+
+  it('parsea el fixture del contrato, también como texto JSON', () => {
+    assert.deepEqual(mapRow(feedbackRow(valid)).templateParams, valid);
+    assert.deepEqual(mapRow(feedbackRow(JSON.stringify(valid))).templateParams, valid);
+  });
+
+  it('descarta las claves desconocidas y las de otras plantillas', () => {
+    const row = mapRow(feedbackRow({ ...valid, extra: 'x', boton_comercio: CONTRACT_TENANT_ID, cupon: 'c' }));
+    assert.deepEqual(row.templateParams, valid);
+  });
+
+  it('cada variable faltante, vacía o que no es texto → params incompletos', () => {
+    for (const key of Object.keys(valid)) {
+      const { [key]: _omit, ...rest } = valid;
+      assert.equal(mapRow(feedbackRow(rest)).templateParams, null, `sin ${key}`);
+      assert.equal(mapRow(feedbackRow({ ...valid, [key]: '  ' })).templateParams, null, `${key} vacío`);
+      assert.equal(mapRow(feedbackRow({ ...valid, [key]: 7 })).templateParams, null, `${key} numérico`);
+    }
+  });
+
+  it('el botón exige 38 caracteres del alfabeto base64url', () => {
+    for (const invalid of [
+      FEEDBACK_CONTRACT_TOKEN.slice(0, 37),
+      `${FEEDBACK_CONTRACT_TOKEN}A`,
+      `${FEEDBACK_CONTRACT_TOKEN.slice(0, 37)}+`,
+      `${FEEDBACK_CONTRACT_TOKEN.slice(0, 37)}=`,
+      `${FEEDBACK_CONTRACT_TOKEN.slice(0, 37)}/`,
+      `../${FEEDBACK_CONTRACT_TOKEN.slice(0, 35)}`,
+      CONTRACT_TENANT_ID,
+    ]) {
+      assert.equal(mapRow(feedbackRow({ ...valid, boton_calificacion: invalid })).templateParams, null, invalid);
+    }
+  });
+
+  it('las ramas no se mezclan: la v2 sigue exigiendo UUID y el token no la satisface (WD-4)', () => {
+    const [contract] = V2_CONTRACT;
+    const v2WithToken = { ...contract.templateParams, boton_comercio: FEEDBACK_CONTRACT_TOKEN };
+    assert.equal(mapRow(feedbackRow(v2WithToken, contract.templateName)).templateParams, null);
+    assert.deepEqual(mapRow(feedbackRow(contract.templateParams, contract.templateName)).templateParams, contract.templateParams);
+  });
+});
+

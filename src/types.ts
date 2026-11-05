@@ -48,7 +48,37 @@ export type TenantTemplateParams = {
   producto_servicio?: string;
 };
 
-export type WhatsappTemplateParams = TenantTemplateParams | SubscriptionReminderTemplateParams;
+/**
+ * 068 (ADR-068-5): calificación del pedido. Rama propia, no es v2: el botón URL dinámico lleva el token
+ * firmado del enlace (`boton_calificacion`, 38 caracteres base64url), no un UUID. `nombre_tenant` va solo en
+ * el encabezado; el cuerpo lleva estas variables en este orden (specs §2.1).
+ */
+export const FEEDBACK_TEMPLATE_NAME = 'calificar_pedido';
+
+export const FEEDBACK_BODY_PARAMS = [
+  'nombre_usuario',
+  'numero_pedido',
+  'nombre_sede',
+  'fecha_pedido',
+] as const;
+
+export type FeedbackTemplateParams = {
+  nombre_tenant: string;
+  nombre_usuario: string;
+  numero_pedido: string;
+  nombre_sede: string;
+  fecha_pedido: string;
+  boton_calificacion: string;
+};
+
+export function isFeedbackParams(params: WhatsappTemplateParams): params is FeedbackTemplateParams {
+  return 'boton_calificacion' in params;
+}
+
+export type WhatsappTemplateParams =
+  | TenantTemplateParams
+  | SubscriptionReminderTemplateParams
+  | FeedbackTemplateParams;
 
 export interface WhatsappQueueRow {
   id: string;

@@ -16,7 +16,7 @@ Worker Node.js/TypeScript que consume `"WhatsappQueue"` (PostgreSQL/Neon) y env�
 - Límite mensual `maxWhatsappPerMonth` se aplica en **rulett-app** al encolar.
 - **`templateParams` JSONB:** rulett-app pre-calcula variables; worker envía `components` con `parameter_name` a Graph API v25.0.
 
-Lee [openspec/specs/](../../openspec/specs/system_architecture.md) y `AGENTS.md` antes de cambios significativos. Cambios de contrato con rulett-app: misma numeración en `openspec/changes/active/`.
+**La memoria técnica vive solo en `openspec/`** (specs, cambios, runbooks). Lee `AGENTS.md` (sección «Dónde está la memoria») antes de cambios significativos. Estado de los cambios: `openspec/changes/active/README.md`. Cambios de contrato con rulett-app: mismo número, asignado por rulett-app.
 
 Variables requeridas: `DATABASE_URL`, `POLL_INTERVAL_MS`, `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_ID`, `WHATSAPP_ACCOUNT_ID`, `WORKER_API_KEY` (prod).
 

@@ -1,6 +1,6 @@
 # Base de datos
 
-> **Fuente canónica:** [../openspec/specs/domain_model.md](../openspec/specs/domain_model.md). Runbook SQL detallado a continuación.
+> **Fuente canónica:** [../openspec/specs/domain_model.md](../specs/domain_model.md). Runbook SQL detallado a continuación.
 
 ## Contexto
 

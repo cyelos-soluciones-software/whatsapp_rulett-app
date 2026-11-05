@@ -46,6 +46,24 @@ Mismas cuatro plantillas de comercio más un botón URL dinámico a `https://www
 - **Fixture de contrato:** `test/fixtures/v2-contract.ts` tiene el JSON exacto de cada v2 y los `components` esperados; se replica en rulett-app (T-14).
 - **Columnas que el worker ignora:** `trigger`, `reason` y `contactId` (056). `RETURNING_COLUMNS` es una lista explícita y el worker solo reclama `PENDING`, así que el estado `CANCELLED` (baja del cliente) nunca se procesa.
 
+### Calificación del pedido `calificar_pedido` (068)
+
+Rama propia (no es v2): la elige el nombre exacto `calificar_pedido` (`FEEDBACK_TEMPLATE_NAME`, `src/types.ts`). Categoría **Utilidad**, `es_CO`. La encola rulett-app 1 h después de finalizar un pedido vinculado a una billetera (`origin = TENANT`, `reason = ORDER_FEEDBACK`, `qrCampaignId` null).
+
+| `templateName` | header | body (orden) | botón que viaja |
+|----------------|--------|--------------|-----------------|
+| `calificar_pedido` | `nombre_tenant` | `nombre_usuario`, `numero_pedido`, `nombre_sede`, `fecha_pedido` | URL dinámica a `https://www.rulett.app/f/{{1}}` con `boton_calificacion` |
+
+- **Botón:** `{ type: "button", sub_type: "url", index, parameters: [{ type: "text", text: <token> }] }`. `index` sale de `WHATSAPP_FEEDBACK_BUTTON_INDEX` (default `"0"`, el único botón); el parámetro va posicional salvo que `WHATSAPP_FEEDBACK_BUTTON_PARAM_NAME` esté definida. Es una configuración aparte de la de las v2: cambiar una no toca la otra.
+- **Validación (`parseTemplateParams`, `src/db/queue.ts`):** rama propia entre el aviso de suscripción y la v2. Todas las variables y `nombre_tenant` son texto no vacío, y `boton_calificacion` cumple `^[A-Za-z0-9_-]{38}$` (el token firmado del enlace, base64url). Si falta algo, `templateParams` queda `null` y la fila termina `FAILED` con `templateParams vacío`, sin llamar a Meta. Las claves desconocidas se descartan. La validación UUID de las v2 no cambia.
+- **Orden de despliegue:** el worker se despliega antes de que rulett-app active `WHATSAPP_FEEDBACK_TEMPLATE_APPROVED=true`; un worker anterior armaría solo el header y Meta respondería 132000.
+- **Fixture de contrato:** `test/fixtures/feedback-contract.ts`; la réplica de la app está en `rulett-app/src/lib/__tests__/fixtures/feedback-contract.ts`.
+- **Pendiente (T-00):** al aprobarse en Meta se anotan aquí la categoría final, el índice del botón y la forma de la variable.
+
+### Logs sin datos personales (068 W-05)
+
+Ningún log del worker incluye el nombre ni el teléfono del destinatario, para ninguna plantilla. «Procesando mensaje» lleva `queueId`, `tenantId`, `campaignId` y `templateName`; «Mensaje enviado» y «Fallo al enviar mensaje» llevan `queueId`, `templateName`, `status` (`SENT` / `FAILED`), `statusCode` y, si falla, el error de Meta con su `code`.
+
 ### Troubleshooting Meta
 
 | Código | HTTP | Causa | Acción |
